@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Couriway — 100K Run Tracker</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Variables ─────────────────────────────────────────────────────────── */
+    :root {
+      --purple-deep:   #100220;
+      --purple-dark:   #1e0a38;
+      --purple-main:   #460b7d;
+      --purple-mid:    #6b1fad;
+      --purple-light:  #9b4dd4;
+      --gold:          #e6cb35;
+      --gold-dim:      #b89f20;
+      --gold-faint:    #e6cb3522;
+      --gold-glow:     rgba(230, 203, 53, 0.12);
+      --text:          #ede0ff;
+      --text-muted:    #9070b8;
+      --border:        rgba(230, 203, 53, 0.18);
+      --border-dim:    rgba(150, 100, 220, 0.2);
+
+      --font-display: 'Cinzel', serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Base ──────────────────────────────────────────────────────────────── */
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--purple-deep);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    /* Ambient radial glow at top */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse at center, rgba(70, 11, 125, 0.5) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    .site-header {
+      padding: 2rem 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-dim);
+    }
+
+    .back-link {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .back-link:hover { color: var(--gold); }
+    .back-link::before { content: '←'; }
+
+    .header-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 4rem 0 3rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.1s;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--gold) 0%, #fff5a0 40%, var(--gold) 70%, var(--gold-dim) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 40px rgba(230, 203, 53, 0.3));
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.2s;
+    }
+
+    .hero-subtitle {
+      font-family: var(--font-display);
+      font-size: clamp(0.85rem, 2vw, 1.1rem);
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--purple-light);
+      margin-top: 0.8rem;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.35s;
+    }
+
+    /* Gold divider line */
+    .hero-divider {
+      width: 120px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 2rem auto;
+      opacity: 0;
+      animation: fadeIn 0.8s ease forwards 0.5s;
+    }
+
+    /* ── Stat Cards ────────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 3rem;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.55s;
+    }
+
+    .stat-card {
+      background: var(--purple-dark);
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold-glow);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .stat-card:hover::after { opacity: 1; }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* ── Section Headers ───────────────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    /* ── Filter Bar ────────────────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: 0.25rem;
+    }
+
+    .filter-btn {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      padding: 0.3rem 0.8rem;
+      background: transparent;
+      border: 1px solid var(--border-dim);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-faint);
+    }
+
+    /* ── Table ─────────────────────────────────────────────────────────────── */
+    .table-wrap {
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 3rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--purple-main);
+    }
+
+    th {
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      padding: 0.85rem 1rem;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th.num, td.num { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-dim);
+      transition: background 0.15s;
+      opacity: 0;
+      animation: rowIn 0.4s ease forwards;
+    }
+    {% for i in range([runs|length, 60]|min) %}
+    tbody tr:nth-child({{ i + 1 }}) { animation-delay: {{ i * 0.012 }}s; }
+    {% endfor %}
+
+    tbody tr:hover { background: var(--gold-faint); }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    .td-run-id {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+
+    .td-time {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+    }
+
+    .td-category {
+      font-size: 0.7rem;
+      color: var(--purple-light);
+      letter-spacing: 0.05em;
+    }
+
+    .td-tag {
+      display: inline-block;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.5rem;
+      border: 1px solid;
+      line-height: 1.6;
+    }
+
+    .tag-gold {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-faint);
+    }
+
+    .tag-purple {
+      border-color: var(--purple-light);
+      color: var(--purple-light);
+      background: rgba(155, 77, 212, 0.08);
+    }
+
+    /* ── Pagination ────────────────────────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1.5rem 0;
+    }
+
+    .page-info {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding: 0 1rem;
+    }
+
+    /* ── Footer ────────────────────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--border-dim);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-text {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .footer-text a {
+      color: var(--gold-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-text a:hover { color: var(--gold); }
+
+    .footer-update {
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    /* ── Animations ────────────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ── Responsive ────────────────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .page { padding: 0 1rem 3rem; }
+      .hero { padding: 2.5rem 0 2rem; }
+      .col-hide { display: none; }
+      th, td { padding: 0.55rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="site-header">
+    <a href="/" class="back-link">MCSR Leaderboard</a>
+    <span class="header-badge">100K Tracker</span>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-eyebrow">All-Time Run History</p>
+    <h1 class="hero-title">Couriway</h1>
+    <p class="hero-subtitle">Minecraft Any% — 100,000 Runs</p>
+    <div class="hero-divider"></div>
+  </section>
+
+  <!-- Stat Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ runs | length | format_int }}</div>
+      <div class="stat-label">Total Runs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.best_igt }}</div>
+      <div class="stat-label">Best Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_igt }}</div>
+      <div class="stat-label">Avg Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.sub_20_count | format_int }}</div>
+      <div class="stat-label">Sub 20:00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_last_25 }}</div>
+      <div class="stat-label">Avg · Last 25</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_last_100 }}</div>
+      <div class="stat-label">Avg · Last 100</div>
+    </div>
+  </div>
+
+  <!-- Run Table -->
+  <div class="section-header" style="opacity:0;animation:fadeUp 0.6s ease forwards 0.7s">
+    <span class="section-title">Run Log</span>
+    <div class="section-line"></div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar" style="opacity:0;animation:fadeUp 0.6s ease forwards 0.8s">
+    <span class="filter-label">View</span>
+    <a href="?view=all"      class="filter-btn {% if view == 'all' %}active{% endif %}">All Runs</a>
+    <a href="?view=recent"   class="filter-btn {% if view == 'recent' %}active{% endif %}">Recent 100</a>
+    <a href="?view=best"     class="filter-btn {% if view == 'best' %}active{% endif %}">Best Runs</a>
+    <a href="?view=sub20"    class="filter-btn {% if view == 'sub20' %}active{% endif %}">Sub 20:00</a>
+  </div>
+
+  <div class="table-wrap" style="opacity:0;animation:fadeIn 0.5s ease forwards 0.85s">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Time</th>
+          <th>RTA</th>
+          <th class="col-hide">Iron Source</th>
+          <th class="col-hide">Bastion</th>
+          <th class="col-hide">Enter Type</th>
+          <th class="num col-hide">Deaths</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td class="td-run-id">{{ run.run_id }}</td>
+          <td class="td-time">{{ run.igt_ms | format_ms if run.igt_ms else '—' }}</td>
+          <td class="td-time" style="color: var(--text-muted); font-weight: 400;">
+            {{ run.rta_ms | format_ms if run.rta_ms else '—' }}
+          </td>
+          <td class="td-category col-hide">{{ run.iron_source or '—' }}</td>
+          <td class="col-hide" style="font-size:0.75rem;">{{ run.bastion_type or '—' }}</td>
+          <td class="td-category col-hide">{{ run.enter_type or '—' }}</td>
+          <td class="num col-hide" style="font-size:0.75rem; color: var(--text-muted);">
+            {{ run.deaths_total if run.deaths_total is not none else '—' }}
+          </td>
+          <td style="font-size:0.72rem; color: var(--text-muted);">
+            {{ run.date or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination info -->
+  {% if total_runs %}
+  <div class="pagination">
+    <span class="page-info">
+      Showing {{ runs | length | format_int }} of {{ total_runs | format_int }} runs
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p class="footer-text">
+      data sourced from
+      <a href="https://docs.google.com/spreadsheets/d/1Tyw9fwdZgsHJoHzlE-0LPSEDOduRkZwL2UUNA-_4Xo4/" target="_blank">
+        couriway's google sheet
+      </a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/hlswan/MCSR-Database" target="_blank">
+        MCSR-Database
+      </a>
+    </p>
+    <p class="footer-update">auto-updated daily · midnight pacific</p>
+  </footer>
+
+</div>
+</body>
+</html>
