@@ -103,6 +103,13 @@ header h1 span {
   color: var(--text);
 }
 
+.nav-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 0.2rem 0.1rem;
+  align-self: stretch;
+}
+
 .toggle-btn.active, nav a.active {
   background: var(--green-dim);
   color: var(--green);
