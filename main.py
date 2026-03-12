@@ -1,12 +1,61 @@
 import sqlite3
 import os
 import csv
-from datetime import datetime
+import glob
+import sys
+from datetime import datetime, date
+
+import requests
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-CSV_PATH = os.path.join("data", "SUB-8s11-Mar-26.csv")
-DB_PATH  = os.path.join("data", "leaderboard.db")
+DB_PATH   = os.path.join("data", "leaderboard.db")
+
+# Google Sheets — SUB-8 leaderboard tab (gid=1452671563)
+SHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo"
+    "/export?format=csv&gid=1452671563"
+)
+
+
+def get_csv_path() -> str:
+    """Return the path of the most recent RSG-*.csv in data/."""
+    matches = sorted(glob.glob(os.path.join("data", "RSG-*.csv")))
+    if not matches:
+        raise FileNotFoundError(
+            "No RSG-*.csv found in data/. Run with --download first."
+        )
+    return matches[-1]
+
+
+def download_sheet(url: str) -> str:
+    """Download the sheet, delete any old RSG-*.csv, save as RSG-YYYY-MM-DD.csv.
+    Returns the path of the newly saved file.
+    """
+    today     = date.today().isoformat()          # e.g. 2026-03-12
+    dest      = os.path.join("data", f"RSG-{today}.csv")
+
+    print(f"Downloading sheet from Google Sheets...")
+    response  = requests.get(url, timeout=30)
+    response.raise_for_status()
+
+    content = response.text
+    if content.strip().startswith("<!DOCTYPE") or content.strip().startswith("<html"):
+        raise ValueError("Got HTML instead of CSV — sheet may not be public.")
+
+    # Delete any previously downloaded RSG-*.csv files
+    for old in glob.glob(os.path.join("data", "RSG-*.csv")):
+        if old != dest:
+            os.remove(old)
+            print(f"  Deleted old file: {old}")
+
+    os.makedirs("data", exist_ok=True)
+    with open(dest, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"  Saved {content.count(chr(10)):,} lines to {dest}")
+    return dest
 
 # ── Column index map (0-based) ─────────────────────────────────────────────────
 # The spreadsheet has 3 header rows; data starts at row index 3.
@@ -100,6 +149,20 @@ def safe_get(row: list, index: int) -> str:
         return ""
 
 
+def fix_encoding(value: str) -> str:
+    """Fix double-encoded UTF-8 emoji/text (e.g. flag emoji mangled on CSV export).
+    Google Sheets sometimes exports UTF-8 bytes interpreted as latin-1, resulting
+    in strings like 'ð\x9f\x87¨' instead of '🇨'. Reversing the mis-encode fixes it.
+    Falls back to the original string if decoding fails.
+    """
+    if not value:
+        return value
+    try:
+        return value.encode('latin-1').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return value
+
+
 def parse_runner_cols(row: list) -> tuple[str | None, str | None]:
     """
     Resolve the runner name and flag regardless of column shift.
@@ -115,10 +178,10 @@ def parse_runner_cols(row: list) -> tuple[str | None, str | None]:
 
     if col5:
         # Shifted layout: col4=flag, col5=runner
-        return col5 or None, col4 or None
+        return col5 or None, fix_encoding(col4) or None
     else:
         # Normal layout: col3=flag, col4=runner
-        return col4 or None, col3 or None
+        return col4 or None, fix_encoding(col3) or None
 
 
 def parse_time_to_ms(value: str) -> int | None:
@@ -142,7 +205,9 @@ def parse_date(value: str) -> str | None:
     Returns None if the value is empty or unparseable."""
     if not value or not value.strip():
         return None
-    cleaned = value.replace("\xa0", " ").strip()
+    # Strip both plain non-breaking space (\xa0) and the Â\xa0 mojibake
+    # that appears when a non-breaking space is double-encoded on export.
+    cleaned = value.replace("Â\xa0", " ").replace("\xa0", " ").strip()
     for fmt in ("%d %b %Y", "%d %B %Y"):
         try:
             return datetime.strptime(cleaned, fmt).date().isoformat()
@@ -353,13 +418,18 @@ def validate_run(run: dict, row_num: int) -> set[str]:
 # ── Load CSV ──────────────────────────────────────────────────────────────────
 
 def load_csv(path: str) -> list[dict]:
-    """Read the CSV, skip the 3 header rows, return list of cleaned run dicts."""
+    """Read the CSV, skip the 6 header/blank rows, return list of cleaned run dicts."""
     with open(path, newline="", encoding="utf-8-sig") as f:
         rows = list(csv.reader(f))
 
+    # New CSV format: 3 header rows each followed by a blank row (6 rows total),
+    # then data rows also separated by blank rows. We skip the first 6 rows and
+    # filter out any subsequent blank rows before parsing.
+    data_rows = [r for r in rows[6:] if any(c.strip() for c in r)]
+
     runs = []
     all_issues: set[str] = set()
-    for i, raw_row in enumerate(rows[3:], start=4):
+    for i, raw_row in enumerate(data_rows, start=7):
         cleaned = clean_row(raw_row)
         if cleaned:
             issues = validate_run(cleaned, i)
@@ -688,15 +758,15 @@ def preview(conn: sqlite3.Connection, n: int = 10):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
-    print(f"Loading CSV from: {CSV_PATH}")
-    runs = load_csv(CSV_PATH)
+def run_pipeline(csv_path: str) -> None:
+    print(f"Loading CSV from: {csv_path}")
+    runs = load_csv(csv_path)
     print(f"Loaded {len(runs)} runs from CSV.")
 
     print(f"Initialising database at: {DB_PATH}")
     conn = init_db(DB_PATH)
 
-    # Clear existing data so re-runs of this script don't duplicate
+    # Clear existing data so re-runs don't duplicate
     conn.execute("DELETE FROM runs")
     conn.execute("DELETE FROM runners")
     conn.commit()
@@ -705,10 +775,16 @@ def main():
     print("Insert complete.")
 
     preview(conn)
-
     conn.close()
     print("Done.")
 
 
 if __name__ == "__main__":
-    main()
+    args = sys.argv[1:]
+
+    if "--download" in args:
+        csv_path = download_sheet(SHEET_URL)
+    else:
+        csv_path = get_csv_path()
+
+    run_pipeline(csv_path)
