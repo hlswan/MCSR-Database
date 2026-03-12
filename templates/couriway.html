@@ -133,7 +133,7 @@
 
     .hero-title {
       font-family: var(--font-display);
-      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-size: clamp(2.8rem, 4vw, 5.5rem);
       font-weight: 900;
       letter-spacing: 0.04em;
       line-height: 1;
@@ -451,17 +451,19 @@
 
   <!-- Hero -->
   <section class="hero">
-    <p class="hero-eyebrow">All-Time Run History</p>
-    <h1 class="hero-title">Couriway</h1>
-    <p class="hero-subtitle">Minecraft Any% — 100,000 Runs</p>
-    <div class="hero-divider"></div>
+    <h1 class="hero-title">Couriway's Challenge</h1>
+    <p class="hero-subtitle">Minecraft Beaten 100,000 Times</p>
   </section>
 
   <!-- Stat Cards -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value">{{ runs | length | format_int }}</div>
-      <div class="stat-label">Total Runs</div>
+      <div class="stat-value">{{ total_runs | format_int }}</div>
+      <div class="stat-label">Runs so far</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.sub_20_count | format_int }}</div>
+      <div class="stat-label">Sub 20:00 Count</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.best_igt }}</div>
@@ -470,10 +472,6 @@
     <div class="stat-card">
       <div class="stat-value">{{ stats.avg_igt }}</div>
       <div class="stat-label">Avg Time</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.sub_20_count | format_int }}</div>
-      <div class="stat-label">Sub 20:00</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.avg_last_25 }}</div>
@@ -485,11 +483,6 @@
     </div>
   </div>
 
-  <!-- Run Table -->
-  <div class="section-header" style="opacity:0;animation:fadeUp 0.6s ease forwards 0.7s">
-    <span class="section-title">Run Log</span>
-    <div class="section-line"></div>
-  </div>
 
   <!-- Filter Bar -->
   <div class="filter-bar" style="opacity:0;animation:fadeUp 0.6s ease forwards 0.8s">
