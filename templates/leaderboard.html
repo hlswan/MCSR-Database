@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCSR Sub-8 Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    tbody tr { animation: fadeIn 0.3s ease both; }
+    {% for i in range(1, 60) %}
+    tbody tr:nth-child({{ i }}) { animation-delay: {{ i * 0.015 }}s; }
+    {% endfor %}
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>MCSR Sub-8 <span>// 1.16+ RSG Any%</span></h1>
+    <span class="subtitle">{{ runs|length }} {{ 'runners' if view == 'leaderboard' else 'runs' }}</span>
+    <div class="toggle">
+      <a href="/?view=leaderboard" class="toggle-btn {% if view == 'leaderboard' %}active{% endif %}">Leaderboard</a>
+      <a href="/?view=all" class="toggle-btn {% if view == 'all' %}active{% endif %}">All Runs</a>
+      <a href="/stats" class="toggle-btn">Stats</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th></th>
+            <th>Runner</th>
+            <th>RTT</th>
+            <th>IGT</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+          <tr>
+            <td class="pos">{{ run.position }}</td>
+            <td class="flag">{{ run.flag or '' }}</td>
+            <td class="runner">{{ run.runner }}</td>
+            <td class="time rtt">{{ run.re_timed_time_raw }}</td>
+            <td class="time igt">{{ run.in_game_time_raw }}</td>
+            <td class="date">{{ run.date }}</td>
+            <td class="status">
+              {% if run.speedrun_com_status == 'Verified' %}
+                <span class="status-verified">Verified</span>
+              {% elif run.speedrun_com_status == 'In Queue' %}
+                <span class="status-queue">In Queue</span>
+              {% elif run.speedrun_com_status == 'Unsubmitted' %}
+                <span class="status-unsubmitted">Unsubmitted</span>
+              {% elif run.speedrun_com_status == 'Rejected' %}
+                <span class="status-rejected">Rejected</span>
+              {% elif run.speedrun_com_status == 'Banned' %}
+                <span class="status-banned">Banned</span>
+              {% else %}
+                <span>—</span>
+              {% endif %}
+            </td>
+            <td class="link">
+              {% if run.link %}
+                <a href="{{ run.link }}" target="_blank">→ watch</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    data sourced from <a href="https://docs.google.com/spreadsheets/d/1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo/edit?usp=sharing" target="_blank">my google sheet</a> &nbsp;·&nbsp; generated from <a href="https://github.com/hlswan/MCSR-Database" target="_blank">MCSR-Database</a>
+  </footer>
+
+</body>
+</html>
