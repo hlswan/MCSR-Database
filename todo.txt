@@ -1,0 +1,13 @@
+Bugs
+Total Runs displays 100 incorrectly when selecting recent 100 instead of all runs.
+Best time displays .mmm, change to just MM:SS.
+Average Time includes recent version runs, so its 8 seconds slower than it should be.
+Header should be 1.16+ RSG Any% Glitchless
+
+
+Features
+Instead of Recent 100/All runs, implement pages of every 100 runs.
+Sub 20 Category should sort by run # most recent run first.
+Change title to MCSR Database not MCSR Sub-8
+Update README.md for information about the website.
+
