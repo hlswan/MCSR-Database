@@ -4,11 +4,11 @@ Average Time includes recent version runs, so its 8 seconds slower than it shoul
 Header should be 1.16+ RSG Any% Glitchless
 Deaths displayed should not be total deaths, it should be deaths without death resets.
 
-Features
-Change to grab RAW-DATA from the Sub 8 Leaderboard Sheet instead of SUB-8s.
+Features(kinda in order)
+Info icon next to status, igt, and rtt.
+
 Instead of Recent 100/All runs, implement pages of every 100 runs.
 Sub 20 Category should sort by run # most recent run first.
-Change title to MCSR Database not MCSR Sub-8.
 Update README.md for information about the website.
 Live Icon for when couriway is live, with link to twitch. Probably make this a scrolling banner at the very top with his stream title.
-
+Change to grab RAW-DATA from the Sub 8 Leaderboard Sheet instead of SUB-8s.
