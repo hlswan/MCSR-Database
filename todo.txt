@@ -6,7 +6,13 @@ Deaths displayed should not be total deaths, it should be deaths without death r
 
 Features(kinda in order)
 Info icon next to status, igt, and rtt.
+Next to Run # have the runs place on the leaderboard listed.
 
+Figure out how to display run info beyond just iron source etc.
+Run should maybe expand when clicked on with all the info about the run?
+What info should the run display when not clicked on?
+
+Start a stats page with graphs on avg time over time, iron source pie graph, courigami, etc.
 Instead of Recent 100/All runs, implement pages of every 100 runs.
 Sub 20 Category should sort by run # most recent run first.
 Update README.md for information about the website.
