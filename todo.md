@@ -1,11 +1,11 @@
-Bugs
+**Bugs**
 Best time displays .mmm, change to just MM:SS.
 Average Time includes recent version runs, so its 8 seconds slower than it should be.
 Header should be 1.16+ RSG Any% Glitchless
 Deaths displayed should not be total deaths, it should be deaths without death resets.
 Sub 20 Category should sort by run # most recent run first.
 
-Features(kinda in order)
+**Features(kinda in order)**
 Info icon next to status, igt, and rtt.
 Next to Run # have the runs place on the leaderboard listed.
 
