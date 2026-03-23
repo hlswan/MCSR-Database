@@ -1,0 +1,21 @@
+**Bugs**
+Best time displays .mmm, change to just MM:SS.
+Average Time includes recent version runs, so its 8 seconds slower than it should be.
+Header should be 1.16+ RSG Any% Glitchless
+Deaths displayed should not be total deaths, it should be deaths without death resets.
+Sub 20 Category should sort by run # most recent run first.
+
+**Features(kinda in order)**
+Info icon next to status, igt, and rtt.
+Next to Run # have the runs place on the leaderboard listed.
+
+Figure out how to display run info beyond just iron source etc.
+Run should maybe expand when clicked on with all the info about the run?
+What info should the run display when not clicked on?
+
+Start a stats page with graphs on avg time over time, iron source pie graph, courigami, etc.
+Instead of Recent 100/All runs, implement pages of every 100 runs.
+
+Update README.md for information about the website.
+Live Icon for when couriway is live, with link to twitch. Probably make this a scrolling banner at the very top with his stream title.
+Change to grab RAW-DATA from the Sub 8 Leaderboard Sheet instead of SUB-8s.
