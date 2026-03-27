@@ -7,10 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <style>
-    /* stats-specific override: main is a flex column */
     main { display: flex; flex-direction: column; gap: 2rem; }
   </style>
 </head>
@@ -26,142 +23,11 @@
   </header>
 
   <main>
-    <div class="chart-card">
-      <div class="section-title">Runs over time</div>
-      <div class="chart-wrap">
-        <canvas id="scatterChart"></canvas>
-      </div>
-      <div class="legend">
-        <div class="legend-item">
-          <div class="legend-dot" style="background:#ffffff"></div>
-          World Record at time of run
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:#4ade80"></div>
-          Personal best at time of run
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.4)"></div>
-          Other run
-        </div>
-      </div>
-    </div>
   </main>
 
   <footer>
     data sourced from <a href="https://docs.google.com/spreadsheets/d/1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo/edit?usp=sharing" target="_blank">my google sheet</a> &nbsp;·&nbsp; generated from <a href="https://github.com/hlswan/MCSR-Database" target="_blank">MCSR-Database</a>
   </footer>
-
-  <script>
-    // ── data from Flask ───────────────────────────────────────────────────────
-    const rawRuns = [
-      {% for run in runs %}
-      {
-        x: "{{ run.date }}",
-        y: {{ run.re_timed_time_ms }},
-        runner: {{ run.runner | tojson }},
-        rtt: {{ run.re_timed_time_ms }},
-        isPb: {{ 1 if run.is_pb == 1 else 0 }},
-        isWr: {{ 'true' if run.is_wr == 1 else 'false' }},
-        status: {{ run.speedrun_com_status | tojson }}
-      },
-      {% endfor %}
-    ];
-
-    // ── split into PB and non-PB datasets ────────────────────────────────────
-    const wrRuns    = rawRuns.filter(r => r.isWr);
-    const pbRuns    = rawRuns.filter(r => r.isPb === 1 && !r.isWr);
-    const otherRuns = rawRuns.filter(r => r.isPb !== 1 && !r.isWr);
-
-    // ── format ms → M:SS.mmm for tooltips ────────────────────────────────────
-    function msToTime(ms) {
-      const totalSeconds = ms / 1000;
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = (totalSeconds % 60).toFixed(3).padStart(6, '0');
-      return `${minutes}:${seconds}`;
-    }
-
-    // ── chart ─────────────────────────────────────────────────────────────────
-    const ctx = document.getElementById('scatterChart').getContext('2d');
-
-    new Chart(ctx, {
-      type: 'scatter',
-      data: {
-        datasets: [
-          {
-            label: 'World Record',
-            data: wrRuns,
-            backgroundColor: '#ffffff',
-            borderColor: '#ffffff',
-            pointRadius: 7,
-            pointHoverRadius: 9,
-            pointStyle: 'star',
-          },
-          {
-            label: 'Personal Best',
-            data: pbRuns,
-            backgroundColor: '#4ade80',
-            pointRadius: 5,
-            pointHoverRadius: 7,
-          },
-          {
-            label: 'Other Run',
-            data: otherRuns,
-            backgroundColor: 'rgba(74,222,128,0.15)',
-            borderColor: 'rgba(74,222,128,0.4)',
-            borderWidth: 1,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            type: 'time',
-            time: { unit: 'month', tooltipFormat: 'MMM yyyy' },
-            grid: { color: '#1e2a1e' },
-            ticks: {
-              color: '#5a7a5a',
-              font: { family: "'Share Tech Mono', monospace", size: 11 }
-            }
-          },
-          y: {
-            grid: { color: '#1e2a1e' },
-            ticks: {
-              color: '#5a7a5a',
-              font: { family: "'Share Tech Mono', monospace", size: 11 },
-              callback: val => msToTime(val)
-            }
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            usePointStyle: true,
-            backgroundColor: '#111411',
-            borderColor: '#1e2a1e',
-            borderWidth: 1,
-            titleColor: '#4ade80',
-            bodyColor: '#d4e8d4',
-            titleFont: { family: "'Share Tech Mono', monospace", size: 12 },
-            bodyFont: { family: "'Barlow', sans-serif", size: 13 },
-            padding: 10,
-            callbacks: {
-              title: items => items[0].raw.runner,
-              label: item => [
-                `RTT: ${msToTime(item.raw.rtt)}`,
-                `Date: ${item.raw.x}`,
-                `Status: ${item.raw.status}`,
-              ]
-            }
-          }
-        }
-      }
-    });
-  </script>
 
 </body>
 </html>
