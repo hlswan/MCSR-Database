@@ -5,7 +5,6 @@ from flask import Flask, render_template, g, request
 app = Flask(__name__)
 
 DB_PATH = os.path.join("data", "leaderboard.db")
-COURIWAY_DB_PATH = os.path.join("data", "couriway_runs.db")
 
 
 def get_db():
@@ -163,6 +162,75 @@ def stats_player():
 
             pb_progression = [dict(r) for r in pb_progression_rows]
 
+    # ── Pre-compute SVG chart points ────────────────────────────────────────
+    chart_pb_points  = []
+    chart_wr_points  = []
+    wr_runs_list     = [dict(r) for r in wr_runs]
+
+    if pb_progression and wr_runs_list:
+        W, H       = 900, 340
+        pad_l, pad_r, pad_t, pad_b = 72, 24, 20, 40
+        cw = W - pad_l - pad_r
+        ch = H - pad_t - pad_b
+
+        all_ms    = [r["re_timed_time_ms"] for r in pb_progression] + \
+                    [r["re_timed_time_ms"] for r in wr_runs_list]
+        all_dates = [r["date"] for r in pb_progression] + \
+                    [r["date"] for r in wr_runs_list]
+
+        # Convert ISO date strings to integers for range maths
+        def date_int(d):
+            return int(d.replace("-", ""))
+
+        min_d   = min(date_int(d) for d in all_dates)
+        max_d   = max(date_int(d) for d in all_dates)
+        d_range = max_d - min_d or 1
+
+        min_ms   = min(all_ms)
+        max_ms   = max(all_ms)
+        ms_range = max_ms - min_ms or 1
+
+        def to_point(date, ms, label):
+            x = pad_l + (date_int(date) - min_d) / d_range * cw
+            y = pad_t + ch - (ms - min_ms) / ms_range * ch
+            m = int(ms / 1000 // 60)
+            s = ms / 1000 % 60
+            return {
+                "x": round(x, 2),
+                "y": round(y, 2),
+                "label": f"{label}: {m}:{s:06.3f} · {date}",
+            }
+
+        chart_pb_points = [to_point(r["date"], r["re_timed_time_ms"], "PB")
+                           for r in pb_progression]
+        chart_wr_points = [to_point(r["date"], r["re_timed_time_ms"], "WR")
+                           for r in wr_runs_list]
+
+        # Y-axis tick labels (6 evenly spaced ms values)
+        y_ticks = []
+        for i in range(6):
+            ms_val = max_ms - (ms_range / 5 * i)
+            y_svg  = pad_t + (ch / 5 * i)
+            m = int(ms_val / 1000 // 60)
+            s = int(ms_val / 1000 % 60)
+            y_ticks.append({"y": round(y_svg, 2), "label": f"{m}:{s:02d}"})
+
+        # X-axis tick labels (up to 6 evenly spaced PB dates)
+        x_ticks = []
+        step = max(1, len(pb_progression) // 5)
+        for r in pb_progression[::step]:
+            x = pad_l + (date_int(r["date"]) - min_d) / d_range * cw
+            x_ticks.append({"x": round(x, 2), "label": r["date"][:7]})
+
+        chart_meta = {
+            "W": W, "H": H,
+            "pad_l": pad_l, "pad_r": pad_r, "pad_t": pad_t, "pad_b": pad_b,
+            "y_ticks": y_ticks,
+            "x_ticks": x_ticks,
+        }
+    else:
+        chart_meta = None
+
     return render_template(
         "player_stats.html",
         all_runner_names=all_runner_names,
@@ -170,7 +238,10 @@ def stats_player():
         runner_stats=runner_stats,
         runner_runs=runner_runs,
         pb_progression=pb_progression,
-        wr_runs=[dict(r) for r in wr_runs],
+        wr_runs=wr_runs_list,
+        chart_pb_points=chart_pb_points,
+        chart_wr_points=chart_wr_points,
+        chart_meta=chart_meta,
         runner_name=runner_name,
     )
 

@@ -212,8 +212,9 @@
     <nav>
       <a href="/?view=leaderboard" class="toggle-btn">Leaderboard</a>
       <a href="/?view=all" class="toggle-btn">All Runs</a>
-        <span class="nav-divider"></span>
       <a href="/stats" class="toggle-btn active">Stats</a>
+      <span class="nav-divider"></span>
+      <a href="/couriway" class="toggle-btn">Couriway 100k</a>
     </nav>
   </header>
 
@@ -281,36 +282,14 @@
     </div>
 
     <!-- ── PB Progression Chart ── -->
-    {% if pb_progression and wr_runs %}
+    {% if chart_meta %}
     <div class="chart-card">
       <div class="chart-title">PB Progression vs World Record</div>
 
-      {# Build chart data in Python/Jinja then render as inline SVG #}
-      {% set all_dates = (pb_progression | map(attribute='date') | list) + (wr_runs | map(attribute='date') | list) %}
-      {% set all_ms    = (pb_progression | map(attribute='re_timed_time_ms') | list) + (wr_runs | map(attribute='re_timed_time_ms') | list) %}
-
-      {# Chart dimensions #}
-      {% set W = 900 %}
-      {% set H = 340 %}
-      {% set pad_l = 72 %}
-      {% set pad_r = 24 %}
-      {% set pad_t = 20 %}
-      {% set pad_b = 40 %}
-      {% set cw = W - pad_l - pad_r %}
-      {% set ch = H - pad_t - pad_b %}
-
-      {# Date range as epoch days (rough) — use string comparison since ISO dates sort lexically #}
-      {% set sorted_dates = all_dates | sort %}
-      {% set min_date = sorted_dates[0] %}
-      {% set max_date = sorted_dates[-1] %}
-
-      {# Time range in ms #}
-      {% set min_ms = all_ms | min %}
-      {% set max_ms = all_ms | max %}
-      {% set ms_range = max_ms - min_ms %}
-
-      {# Helper macro: map a date string to SVG x coord #}
-      {# We compare date strings lexically which works for ISO YYYY-MM-DD #}
+      {% set W = chart_meta.W %}
+      {% set H = chart_meta.H %}
+      {% set pad_l = chart_meta.pad_l %}
+      {% set pad_b = chart_meta.pad_b %}
 
       <svg class="pb-chart" viewBox="0 0 {{ W }} {{ H }}" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -321,69 +300,37 @@
             .line-wr     { fill: none; stroke: #f0c040; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
             .dot-pb      { fill: #4ade80; }
             .dot-wr      { fill: #f0c040; }
-            .tip         { font-family: 'Share Tech Mono', monospace; font-size: 10px; fill: #d4e8d4; }
           </style>
         </defs>
 
-        {# Background grid lines (5 horizontal) #}
-        {% for i in range(6) %}
-          {% set y = pad_t + (ch / 5 * i) %}
-          <line class="chart-axis" x1="{{ pad_l }}" y1="{{ y }}" x2="{{ W - pad_r }}" y2="{{ y }}" />
-          {# Y label: interpolate ms value #}
-          {% set ms_val = max_ms - (ms_range / 5 * i) %}
-          {% set s_total = (ms_val / 1000) | int %}
-          {% set m_part  = (s_total // 60) | int %}
-          {% set s_part  = s_total % 60 %}
-          <text class="chart-tick" x="{{ pad_l - 6 }}" y="{{ y + 4 }}" text-anchor="end">{{ m_part }}:{{ '%02d'|format(s_part) }}</text>
+        {# Y-axis grid + labels #}
+        {% for t in chart_meta.y_ticks %}
+        <line class="chart-axis" x1="{{ pad_l }}" y1="{{ t.y }}" x2="{{ W - chart_meta.pad_r }}" y2="{{ t.y }}" />
+        <text class="chart-tick" x="{{ pad_l - 6 }}" y="{{ t.y + 4 }}" text-anchor="end">{{ t.label }}</text>
         {% endfor %}
 
-        {# X axis labels (up to 6 evenly spaced dates) #}
-        {% set date_pool = (pb_progression | map(attribute='date') | list) %}
-        {% set step = [1, (date_pool|length // 5)] | max %}
-        {% for idx in range(0, date_pool|length, step) %}
-          {% set d = date_pool[idx] %}
-          {# x position: proportional between min and max date (lexical works for ISO) #}
-          {# We use character-level trick: convert YYYY-MM-DD to comparable number #}
-          {% set x_frac = ((d | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
-          {% set x = pad_l + x_frac * cw %}
-          <text class="chart-tick" x="{{ x }}" y="{{ H - pad_b + 16 }}" text-anchor="middle">{{ d[0:7] }}</text>
+        {# X-axis labels #}
+        {% for t in chart_meta.x_ticks %}
+        <text class="chart-tick" x="{{ t.x }}" y="{{ H - pad_b + 16 }}" text-anchor="middle">{{ t.label }}</text>
         {% endfor %}
 
         {# WR line #}
-        {% set wr_points = [] %}
-        {% for r in wr_runs %}
-          {% set x_frac = ((r.date | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
-          {% set y_frac = (r.re_timed_time_ms - min_ms) / (ms_range or 1) %}
-          {% set x = pad_l + x_frac * cw %}
-          {% set y = pad_t + ch - y_frac * ch %}
-          {% if wr_points.append({'x': x, 'y': y, 'ms': r.re_timed_time_ms, 'date': r.date}) %}{% endif %}
-        {% endfor %}
-
-        {% if wr_points %}
-        <polyline class="line-wr" points="{% for p in wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
-        {% for p in wr_points %}
-          <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-            <title>WR: {{ (p.ms / 1000 / 60) | int }}:{{ '%06.3f'|format(p.ms / 1000 % 60) }} · {{ p.date }}</title>
-          </circle>
+        {% if chart_wr_points %}
+        <polyline class="line-wr" points="{% for p in chart_wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% for p in chart_wr_points %}
+        <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+          <title>{{ p.label }}</title>
+        </circle>
         {% endfor %}
         {% endif %}
 
         {# PB line #}
-        {% set pb_points = [] %}
-        {% for r in pb_progression %}
-          {% set x_frac = ((r.date | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
-          {% set y_frac = (r.re_timed_time_ms - min_ms) / (ms_range or 1) %}
-          {% set x = pad_l + x_frac * cw %}
-          {% set y = pad_t + ch - y_frac * ch %}
-          {% if pb_points.append({'x': x, 'y': y, 'ms': r.re_timed_time_ms, 'date': r.date}) %}{% endif %}
-        {% endfor %}
-
-        {% if pb_points %}
-        <polyline class="line-pb" points="{% for p in pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
-        {% for p in pb_points %}
-          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-            <title>PB: {{ (p.ms / 1000 / 60) | int }}:{{ '%06.3f'|format(p.ms / 1000 % 60) }} · {{ p.date }}</title>
-          </circle>
+        {% if chart_pb_points %}
+        <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% for p in chart_pb_points %}
+        <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+          <title>{{ p.label }}</title>
+        </circle>
         {% endfor %}
         {% endif %}
 
