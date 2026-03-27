@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player Stats — MCSR Database</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    main { display: flex; flex-direction: column; gap: 2rem; }
+
+    /* ── Search ── */
+    .search-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 3rem 1rem 1.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      padding: 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--green);
+    }
+
+    .search-box input::placeholder {
+      color: var(--muted);
+    }
+
+    /* autocomplete dropdown */
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      z-index: 10;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .autocomplete-list.open { display: block; }
+
+    .autocomplete-item {
+      padding: 0.5rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .popular-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .popular-list {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .popular-btn {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--green);
+      background: var(--green-dim);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.3rem 0.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+
+    .popular-btn:hover { border-color: var(--green); }
+
+    /* ── Stat Cards ── */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .stat-card {
+      background: var(--surface);
+      padding: 1.25rem 1rem;
+      text-align: center;
+    }
+
+    .stat-card .val {
+      font-family: var(--mono);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .stat-card .lbl {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+
+    /* ── Chart ── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem;
+    }
+
+    .chart-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 1.25rem;
+      margin-top: 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    svg.pb-chart {
+      width: 100%;
+      height: auto;
+      display: block;
+      overflow: visible;
+    }
+
+    /* ── Runs Table ── */
+    .runner-header {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .is-wr  { color: var(--gold); }
+    .is-pb  { color: var(--green); }
+
+    @media (max-width: 600px) {
+      .col-hide { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>MCSR Database <span>// Player Stats</span></h1>
+    <nav>
+      <a href="/?view=leaderboard" class="toggle-btn">Leaderboard</a>
+      <a href="/?view=all" class="toggle-btn">All Runs</a>
+        <span class="nav-divider"></span>
+      <a href="/stats" class="toggle-btn active">Stats</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ── Search ── -->
+    <div class="search-wrap">
+      <div class="search-box">
+        <input
+          id="runner-search"
+          type="text"
+          placeholder="Search runner..."
+          autocomplete="off"
+          value="{{ runner_name }}"
+        />
+        <div class="autocomplete-list" id="autocomplete-list">
+          {% for name in all_runner_names %}
+          <div class="autocomplete-item" data-name="{{ name }}">{{ name }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if not selected_runner %}
+      <p class="popular-label">Popular Searches</p>
+      <div class="popular-list">
+        <a class="popular-btn" href="/stats/player?runner=skycrab1">skycrab1</a>
+        <a class="popular-btn" href="/stats/player?runner=Aquacorde">Aquacorde</a>
+        <a class="popular-btn" href="/stats/player?runner=lowkey">lowkey</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if selected_runner and runner_stats %}
+
+    <!-- ── Stat Cards ── -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.pb or '—' }}</div>
+        <div class="lbl">Personal Best</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ '#' + runner_stats.lb_position|string if runner_stats.lb_position else '—' }}</div>
+        <div class="lbl">LB Position</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.total }}</div>
+        <div class="lbl">Total Runs</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.sub10 }}</div>
+        <div class="lbl">Sub 10:00</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.sub9 }}</div>
+        <div class="lbl">Sub 9:00</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.sub8 }}</div>
+        <div class="lbl">Sub 8:00</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ runner_stats.sub7 }}</div>
+        <div class="lbl">Sub 7:00</div>
+      </div>
+    </div>
+
+    <!-- ── PB Progression Chart ── -->
+    {% if pb_progression and wr_runs %}
+    <div class="chart-card">
+      <div class="chart-title">PB Progression vs World Record</div>
+
+      {# Build chart data in Python/Jinja then render as inline SVG #}
+      {% set all_dates = (pb_progression | map(attribute='date') | list) + (wr_runs | map(attribute='date') | list) %}
+      {% set all_ms    = (pb_progression | map(attribute='re_timed_time_ms') | list) + (wr_runs | map(attribute='re_timed_time_ms') | list) %}
+
+      {# Chart dimensions #}
+      {% set W = 900 %}
+      {% set H = 340 %}
+      {% set pad_l = 72 %}
+      {% set pad_r = 24 %}
+      {% set pad_t = 20 %}
+      {% set pad_b = 40 %}
+      {% set cw = W - pad_l - pad_r %}
+      {% set ch = H - pad_t - pad_b %}
+
+      {# Date range as epoch days (rough) — use string comparison since ISO dates sort lexically #}
+      {% set sorted_dates = all_dates | sort %}
+      {% set min_date = sorted_dates[0] %}
+      {% set max_date = sorted_dates[-1] %}
+
+      {# Time range in ms #}
+      {% set min_ms = all_ms | min %}
+      {% set max_ms = all_ms | max %}
+      {% set ms_range = max_ms - min_ms %}
+
+      {# Helper macro: map a date string to SVG x coord #}
+      {# We compare date strings lexically which works for ISO YYYY-MM-DD #}
+
+      <svg class="pb-chart" viewBox="0 0 {{ W }} {{ H }}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            .chart-axis { stroke: #1e2a1e; stroke-width: 1; }
+            .chart-tick  { font-family: 'Share Tech Mono', monospace; font-size: 11px; fill: #5a7a5a; }
+            .line-pb     { fill: none; stroke: #4ade80; stroke-width: 2; stroke-linejoin: round; }
+            .line-wr     { fill: none; stroke: #f0c040; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
+            .dot-pb      { fill: #4ade80; }
+            .dot-wr      { fill: #f0c040; }
+            .tip         { font-family: 'Share Tech Mono', monospace; font-size: 10px; fill: #d4e8d4; }
+          </style>
+        </defs>
+
+        {# Background grid lines (5 horizontal) #}
+        {% for i in range(6) %}
+          {% set y = pad_t + (ch / 5 * i) %}
+          <line class="chart-axis" x1="{{ pad_l }}" y1="{{ y }}" x2="{{ W - pad_r }}" y2="{{ y }}" />
+          {# Y label: interpolate ms value #}
+          {% set ms_val = max_ms - (ms_range / 5 * i) %}
+          {% set s_total = (ms_val / 1000) | int %}
+          {% set m_part  = (s_total // 60) | int %}
+          {% set s_part  = s_total % 60 %}
+          <text class="chart-tick" x="{{ pad_l - 6 }}" y="{{ y + 4 }}" text-anchor="end">{{ m_part }}:{{ '%02d'|format(s_part) }}</text>
+        {% endfor %}
+
+        {# X axis labels (up to 6 evenly spaced dates) #}
+        {% set date_pool = (pb_progression | map(attribute='date') | list) %}
+        {% set step = [1, (date_pool|length // 5)] | max %}
+        {% for idx in range(0, date_pool|length, step) %}
+          {% set d = date_pool[idx] %}
+          {# x position: proportional between min and max date (lexical works for ISO) #}
+          {# We use character-level trick: convert YYYY-MM-DD to comparable number #}
+          {% set x_frac = ((d | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
+          {% set x = pad_l + x_frac * cw %}
+          <text class="chart-tick" x="{{ x }}" y="{{ H - pad_b + 16 }}" text-anchor="middle">{{ d[0:7] }}</text>
+        {% endfor %}
+
+        {# WR line #}
+        {% set wr_points = [] %}
+        {% for r in wr_runs %}
+          {% set x_frac = ((r.date | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
+          {% set y_frac = (r.re_timed_time_ms - min_ms) / (ms_range or 1) %}
+          {% set x = pad_l + x_frac * cw %}
+          {% set y = pad_t + ch - y_frac * ch %}
+          {% if wr_points.append({'x': x, 'y': y, 'ms': r.re_timed_time_ms, 'date': r.date}) %}{% endif %}
+        {% endfor %}
+
+        {% if wr_points %}
+        <polyline class="line-wr" points="{% for p in wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% for p in wr_points %}
+          <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+            <title>WR: {{ (p.ms / 1000 / 60) | int }}:{{ '%06.3f'|format(p.ms / 1000 % 60) }} · {{ p.date }}</title>
+          </circle>
+        {% endfor %}
+        {% endif %}
+
+        {# PB line #}
+        {% set pb_points = [] %}
+        {% for r in pb_progression %}
+          {% set x_frac = ((r.date | replace('-','')) | int - (min_date | replace('-','')) | int) / (((max_date | replace('-','')) | int - (min_date | replace('-','')) | int) or 1) %}
+          {% set y_frac = (r.re_timed_time_ms - min_ms) / (ms_range or 1) %}
+          {% set x = pad_l + x_frac * cw %}
+          {% set y = pad_t + ch - y_frac * ch %}
+          {% if pb_points.append({'x': x, 'y': y, 'ms': r.re_timed_time_ms, 'date': r.date}) %}{% endif %}
+        {% endfor %}
+
+        {% if pb_points %}
+        <polyline class="line-pb" points="{% for p in pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% for p in pb_points %}
+          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+            <title>PB: {{ (p.ms / 1000 / 60) | int }}:{{ '%06.3f'|format(p.ms / 1000 % 60) }} · {{ p.date }}</title>
+          </circle>
+        {% endfor %}
+        {% endif %}
+
+      </svg>
+
+      <div class="chart-legend">
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#4ade80"></div>
+          {{ selected_runner.name }} PB progression
+        </div>
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#f0c040"></div>
+          World Record
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Runs Table ── -->
+    <div>
+      <div class="runner-header">All runs — {{ selected_runner.name }}</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>RTT</th>
+              <th class="col-hide">IGT</th>
+              <th>Date</th>
+              <th class="col-hide">Status</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for run in runner_runs | sort(attribute='re_timed_time_ms') %}
+            <tr>
+              <td class="time rtt {% if run.is_wr %}is-wr{% elif run.is_pb %}is-pb{% endif %}">
+                {{ run.re_timed_time_raw or '—' }}
+                {% if run.is_wr %}<span style="font-size:0.65rem; margin-left:0.4rem; color:var(--gold);">WR</span>{% endif %}
+              </td>
+              <td class="time igt col-hide">{{ run.in_game_time_raw or '—' }}</td>
+              <td class="date">{{ run.date or '—' }}</td>
+              <td class="status col-hide">
+                {% if run.speedrun_com_status == 'Verified' %}
+                  <span class="status-verified">Verified</span>
+                {% elif run.speedrun_com_status == 'In Queue' %}
+                  <span class="status-queue">In Queue</span>
+                {% elif run.speedrun_com_status == 'Unsubmitted' %}
+                  <span class="status-unsubmitted">Unsubmitted</span>
+                {% elif run.speedrun_com_status == 'Rejected' %}
+                  <span class="status-rejected">Rejected</span>
+                {% elif run.speedrun_com_status == 'Banned' %}
+                  <span class="status-banned">Banned</span>
+                {% else %}
+                  <span>—</span>
+                {% endif %}
+              </td>
+              <td class="link">
+                {% if run.link %}
+                  <a href="{{ run.link }}" target="_blank">→ watch</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% endif %}
+
+  </main>
+
+  <footer>
+    data sourced from <a href="https://docs.google.com/spreadsheets/d/1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo/edit?usp=sharing" target="_blank">my google sheet</a> &nbsp;·&nbsp; generated from <a href="https://github.com/hlswan/MCSR-Database" target="_blank">MCSR-Database</a>
+  </footer>
+
+  <script>
+    // ── Autocomplete ──────────────────────────────────────────────────────────
+    const input   = document.getElementById('runner-search');
+    const list    = document.getElementById('autocomplete-list');
+    const items   = Array.from(list.querySelectorAll('.autocomplete-item'));
+    let activeIdx = -1;
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      let anyVisible = false;
+      activeIdx = -1;
+      items.forEach(el => {
+        const match = q && el.dataset.name.toLowerCase().includes(q);
+        el.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+      list.classList.toggle('open', anyVisible);
+    });
+
+    input.addEventListener('keydown', e => {
+      const visible = items.filter(el => el.style.display !== 'none');
+      if (e.key === 'ArrowDown') {
+        activeIdx = Math.min(activeIdx + 1, visible.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        activeIdx = Math.max(activeIdx - 1, 0);
+      } else if (e.key === 'Enter') {
+        if (activeIdx >= 0 && visible[activeIdx]) {
+          selectRunner(visible[activeIdx].dataset.name);
+        } else if (input.value.trim()) {
+          selectRunner(input.value.trim());
+        }
+        return;
+      } else if (e.key === 'Escape') {
+        list.classList.remove('open');
+        return;
+      }
+      visible.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    });
+
+    items.forEach(el => {
+      el.addEventListener('mousedown', () => selectRunner(el.dataset.name));
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.search-box')) list.classList.remove('open');
+    });
+
+    function selectRunner(name) {
+      window.location.href = '/stats/player?runner=' + encodeURIComponent(name);
+    }
+  </script>
+
+</body>
+</html>

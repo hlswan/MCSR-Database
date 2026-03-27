@@ -3,12 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stats — MCSR Sub-8</title>
+  <title>Stats — MCSR Database</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-    main { display: flex; flex-direction: column; gap: 2rem; }
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 6rem 2rem;
+    }
+
+    .stats-nav {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stats-nav-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2.5rem 3.5rem;
+      text-decoration: none;
+      color: var(--text);
+      font-family: var(--mono);
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .stats-nav-card:hover {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+
+    .stats-nav-card .card-title {
+      font-size: 1.1rem;
+      color: var(--green);
+      letter-spacing: 0.08em;
+    }
+
+    .stats-nav-card .card-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .page-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -19,10 +73,23 @@
       <a href="/?view=leaderboard" class="toggle-btn">Leaderboard</a>
       <a href="/?view=all" class="toggle-btn">All Runs</a>
       <a href="/stats" class="toggle-btn active">Stats</a>
+      <span class="nav-divider"></span>
+      <a href="/couriway" class="toggle-btn">Couriway 100k</a>
     </nav>
   </header>
 
   <main>
+    <p class="page-label">Choose a category</p>
+    <div class="stats-nav">
+      <a href="/stats/player" class="stats-nav-card">
+        <span class="card-title">Player Stats</span>
+        <span class="card-sub">PBs, progressions, run history</span>
+      </a>
+      <a href="/stats/runs" class="stats-nav-card">
+        <span class="card-title">Run Stats</span>
+        <span class="card-sub">Trends, splits, distributions</span>
+      </a>
+    </div>
   </main>
 
   <footer>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Run Stats — MCSR Database</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6rem 2rem;
+      gap: 0.75rem;
+    }
+
+    .coming-soon {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>MCSR Database <span>// Run Stats</span></h1>
+    <nav>
+      <a href="/?view=leaderboard" class="toggle-btn">Leaderboard</a>
+      <a href="/?view=all" class="toggle-btn">All Runs</a>
+        <span class="nav-divider"></span>
+      <a href="/stats" class="toggle-btn active">Stats</a>
+    </nav>
+  </header>
+
+  <main>
+    <p class="coming-soon">Coming soon</p>
+    <a href="/stats" style="font-family: var(--mono); font-size: 0.75rem; color: var(--green); text-decoration: none;">← Back to Stats</a>
+  </main>
+
+  <footer>
+    data sourced from <a href="https://docs.google.com/spreadsheets/d/1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo/edit?usp=sharing" target="_blank">my google sheet</a> &nbsp;·&nbsp; generated from <a href="https://github.com/hlswan/MCSR-Database" target="_blank">MCSR-Database</a>
+  </footer>
+
+</body>
+</html>
