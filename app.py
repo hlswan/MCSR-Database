@@ -5,7 +5,6 @@ from flask import Flask, render_template, g, request
 app = Flask(__name__)
 
 DB_PATH = os.path.join("data", "leaderboard.db")
-COURIWAY_DB_PATH = os.path.join("data", "couriway_runs.db")
 
 
 def get_db():
