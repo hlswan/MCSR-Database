@@ -759,11 +759,12 @@ def preview(conn: sqlite3.Connection, n: int = 10):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run_pipeline(csv_path: str) -> None:
-    print(f"Loading CSV from: {csv_path}")
+    info = "  [INFO] "
+    print(f"{info}Loading CSV from: {csv_path}")
     runs = load_csv(csv_path)
-    print(f"Loaded {len(runs)} runs from CSV.")
+    print(f"{info}Loaded {len(runs)} runs from CSV.")
 
-    print(f"Initialising database at: {DB_PATH}")
+    print(f"{info}Initialising database at: {DB_PATH}")
     conn = init_db(DB_PATH)
 
     # Clear existing data so re-runs don't duplicate
@@ -772,7 +773,7 @@ def run_pipeline(csv_path: str) -> None:
     conn.commit()
 
     insert_runs(conn, runs)
-    print("Insert complete.")
+    print(f"{info}Insert complete.")
 
     preview(conn)
     conn.close()
