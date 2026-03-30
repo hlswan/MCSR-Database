@@ -212,9 +212,8 @@
     <nav>
       <a href="/?view=leaderboard" class="toggle-btn">Leaderboard</a>
       <a href="/?view=all" class="toggle-btn">All Runs</a>
-      <a href="/stats" class="toggle-btn active">Stats</a>
       <span class="nav-divider"></span>
-      <a href="/couriway" class="toggle-btn">Couriway 100k</a>
+      <a href="/stats" class="toggle-btn active">Stats</a>
     </nav>
   </header>
 
@@ -257,27 +256,23 @@
       </div>
       <div class="stat-card">
         <div class="val">{{ '#' + runner_stats.lb_position|string if runner_stats.lb_position else '—' }}</div>
-        <div class="lbl">LB Position</div>
-      </div>
-      <div class="stat-card">
-        <div class="val">{{ runner_stats.total }}</div>
-        <div class="lbl">Total Runs</div>
+        <div class="lbl">Leaderboard Position</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub10 }}</div>
-        <div class="lbl">Sub 10:00</div>
+        <div class="lbl">Sub 10</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub9 }}</div>
-        <div class="lbl">Sub 9:00</div>
+        <div class="lbl">Sub 9</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub8 }}</div>
-        <div class="lbl">Sub 8:00</div>
+        <div class="lbl">Sub 8</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub7 }}</div>
-        <div class="lbl">Sub 7:00</div>
+        <div class="lbl">Sub 7</div>
       </div>
     </div>
 
@@ -294,12 +289,13 @@
       <svg class="pb-chart" viewBox="0 0 {{ W }} {{ H }}" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <style>
-            .chart-axis { stroke: #1e2a1e; stroke-width: 1; }
+            .chart-axis  { stroke: #1e2a1e; stroke-width: 1; }
             .chart-tick  { font-family: 'Share Tech Mono', monospace; font-size: 11px; fill: #5a7a5a; }
             .line-pb     { fill: none; stroke: #4ade80; stroke-width: 2; stroke-linejoin: round; }
             .line-wr     { fill: none; stroke: #f0c040; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
             .dot-pb      { fill: #4ade80; }
             .dot-wr      { fill: #f0c040; }
+            .dot-run     { fill: #14532d; /* dark green */ opacity: 0.35; }
           </style>
         </defs>
 
@@ -313,6 +309,15 @@
         {% for t in chart_meta.x_ticks %}
         <text class="chart-tick" x="{{ t.x }}" y="{{ H - pad_b + 16 }}" text-anchor="middle">{{ t.label }}</text>
         {% endfor %}
+
+        {# Non-PB runs (background dots) #}
+        {% if chart_all_points %}
+        {% for p in chart_all_points %}
+        <circle class="dot-run" cx="{{ p.x }}" cy="{{ p.y }}" r="3">
+          <title>{{ p.label }}</title>
+        </circle>
+        {% endfor %}
+        {% endif %}
 
         {# WR line #}
         {% if chart_wr_points %}
@@ -351,7 +356,6 @@
 
     <!-- ── Runs Table ── -->
     <div>
-      <div class="runner-header">All runs — {{ selected_runner.name }}</div>
       <div class="table-wrap">
         <table>
           <thead>

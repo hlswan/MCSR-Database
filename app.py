@@ -99,6 +99,7 @@ def stats_player():
     pb_progression  = None
     chart_pb_points = []
     chart_wr_points = []
+    chart_all_points = []
     chart_meta      = None
     wr_runs_list    = [dict(r) for r in wr_runs]
 
@@ -285,6 +286,7 @@ def stats_player():
         wr_runs=wr_runs_list,
         chart_pb_points=chart_pb_points,
         chart_wr_points=chart_wr_points,
+        chart_all_points=chart_all_points,
         chart_meta=chart_meta,
         runner_name=runner_name,
     )
