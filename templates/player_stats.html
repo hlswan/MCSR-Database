@@ -319,23 +319,32 @@
         {% endfor %}
         {% endif %}
 
-        {# WR line #}
+        {# ── WR step line #}
         {% if chart_wr_points %}
         <polyline class="line-wr" points="{% for p in chart_wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
         {% for p in chart_wr_points %}
-        <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-          <title>{{ p.label }}</title>
-        </circle>
+          <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+            <title>{{ p.label }}</title>
+          </circle>
         {% endfor %}
         {% endif %}
 
-        {# PB line #}
+        {# ── PB step line #}
         {% if chart_pb_points %}
         <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
         {% for p in chart_pb_points %}
-        <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-          <title>{{ p.label }}</title>
-        </circle>
+          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+            <title>{{ p.label }}</title>
+          </circle>
+        {% endfor %}
+        {% endif %}
+
+        {# ── Non-PB runs (faded dots) #}
+        {% if chart_all_points %}
+        {% for p in chart_all_points %}
+          <circle class="dot-run" cx="{{ p.x }}" cy="{{ p.y }}" r="3">
+            <title>{{ p.label }}</title>
+          </circle>
         {% endfor %}
         {% endif %}
 

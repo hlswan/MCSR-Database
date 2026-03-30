@@ -2,6 +2,7 @@ import sqlite3
 import os
 from flask import Flask, render_template, g, request
 from datetime import datetime
+import math
 
 app = Flask(__name__)
 
@@ -166,31 +167,29 @@ def stats_player():
             print("PB count:", len(pb_progression))
             print("WR count:", len(wr_runs_list))
 
-            # ── Pre-compute SVG chart points ────────────────────────────────
+            # ── Pre-compute SVG chart points as step chart ─────────────────────────────
             if pb_progression and wr_runs_list:
                 W, H = 900, 340
                 pad_l, pad_r, pad_t, pad_b = 72, 24, 20, 40
-                cw = W - pad_l - pad_r
-                ch = H - pad_t - pad_b
+                cw, ch = W - pad_l - pad_r, H - pad_t - pad_b
 
-                all_ms    = [r["re_timed_time_ms"] for r in pb_progression] + \
-                            [r["re_timed_time_ms"] for r in wr_runs_list]
+                all_ms = [r["re_timed_time_ms"] for r in pb_progression] + \
+                         [r["re_timed_time_ms"] for r in wr_runs_list]
                 all_dates = [r["date"] for r in pb_progression] + \
                             [r["date"] for r in wr_runs_list]
-                current_year = datetime.now().year
 
+                current_year = datetime.now().year
+                today_ts = datetime.now().timestamp()
 
                 def date_num(d):
                     return datetime.strptime(d, "%Y-%m-%d").timestamp()
 
-                min_d    = min(date_num(d) for d in all_dates)
-                max_d = max(
-                    max(date_num(d) for d in all_dates),
-                    datetime(current_year, 12, 31).timestamp()
-                )
-                d_range  = max_d - min_d or 1
-                min_ms   = min(all_ms)
-                max_ms   = max(all_ms)
+                min_d = min(date_num(d) for d in all_dates)
+                max_d = max(max(date_num(d) for d in all_dates), today_ts)
+                d_range = max_d - min_d or 1
+
+                min_ms = min(all_ms)
+                max_ms = max(all_ms)
                 ms_range = max_ms - min_ms or 1
 
                 def to_point(date, ms, label):
@@ -198,75 +197,71 @@ def stats_player():
                     y = pad_t + ch - (ms - min_ms) / ms_range * ch
                     m = int(ms / 1000 // 60)
                     s = ms / 1000 % 60
-                    return {
-                        "x": round(x, 2),
-                        "y": round(y, 2),
-                        "label": f"{label}: {m}:{s:06.3f} · {date}",
-                    }
+                    return {"x": round(x, 2), "y": round(y, 2), "label": f"{label}: {m}:{s:06.3f} · {date}"}
 
-                chart_pb_points = [to_point(r["date"], r["re_timed_time_ms"], "PB")
-                                   for r in pb_progression]
-                chart_wr_points = [to_point(r["date"], r["re_timed_time_ms"], "WR")
-                                   for r in wr_runs_list]
+                bottom_ms = 390_000  # 6:30
+                top_ms = 600_000  # 10:00
 
+                # ── Step points for PB and WR ─────────────────────────────
+                def build_step_points(records, label):
+                    step_points = []
+                    for i, r in enumerate(records):
+                        y = pad_t + ch - (r['re_timed_time_ms'] - bottom_ms) / (top_ms - bottom_ms) * ch
+                        x = pad_l + (date_num(r['date']) - min_d) / d_range * cw
+                        formatted_time = format_ms(r['re_timed_time_ms'])
+                        if i == 0:
+                            step_points.append({"x": x, "y": y, "label": f"{label}: {formatted_time} · {r['date']}"})
+                        else:
+                            prev = step_points[-1]
+                            # horizontal line from previous x to current x
+                            step_points.append({"x": x, "y": prev["y"], "label": prev["label"]})
+                            # vertical drop to new record
+                            step_points.append({"x": x, "y": y, "label": f"{label}: {formatted_time} · {r['date']}"})
+                    # extend last horizontal to today
+                    last = step_points[-1]
+                    step_points.append({
+                        "x": pad_l + (today_ts - min_d) / d_range * cw,
+                        "y": last["y"],
+                        "label": last["label"] + " (current)"
+                    })
+                    return step_points
+
+                chart_pb_points = build_step_points(pb_progression, "PB")
+                chart_wr_points = build_step_points(wr_runs_list, "WR")
+
+                # ── Non-PB runs (faded dots)
                 chart_all_points = []
-
                 if runner_runs:
                     for r in runner_runs:
-                        # skip PBs (already plotted)
                         if r["is_pb"]:
                             continue
-
                         if not r["date"] or not r["re_timed_time_ms"]:
                             continue
+                        # compute x based on date
+                        x = pad_l + (date_num(r['date']) - min_d) / d_range * cw
+                        # compute y using same bottom/top ms scaling as step chart
+                        y = pad_t + ch - (r['re_timed_time_ms'] - bottom_ms) / (top_ms - bottom_ms) * ch
+                        # format time for tooltip/label
+                        label = f"Run: {format_ms(r['re_timed_time_ms'])} · {r['date']}"
+                        chart_all_points.append({"x": round(x, 2), "y": round(y, 2), "label": label})
 
-                        pt = to_point(r["date"], r["re_timed_time_ms"], "Run")
-
-                        chart_all_points.append(pt)
-
-                # Extend lines horizontally to the right edge
-                if chart_pb_points:
-                    last_pb = chart_pb_points[-1]
-                    chart_pb_points.append({
-                        "x": W - pad_r,
-                        "y": last_pb["y"],
-                        "label": last_pb["label"] + " (current PB)"
-                    })
-
-                if chart_wr_points:
-                    last_wr = chart_wr_points[-1]
-                    chart_wr_points.append({
-                        "x": W - pad_r,
-                        "y": last_wr["y"],
-                        "label": last_wr["label"] + " (current WR)"
-                    })
-
+                # ── Y-axis ticks (every 30 seconds) ─────────────────────────────
                 y_ticks = []
-                for i in range(6):
-                    ms_val = max_ms - (ms_range / 5 * i)
-                    y_svg  = pad_t + (ch / 5 * i)
-                    m = int(ms_val / 1000 // 60)
-                    s = int(ms_val / 1000 % 60)
+                tick_step = 30_000  # 30 sec
+                for ms_val in range(top_ms, bottom_ms - 1, -tick_step):
+                    y_svg = pad_t + ch - (ms_val - bottom_ms) / (top_ms - bottom_ms) * ch
+                    m, s = divmod(ms_val // 1000, 60)
                     y_ticks.append({"y": round(y_svg, 2), "label": f"{m}:{s:02d}"})
 
-
-
+                # ── X-axis ticks (year) ─────────────────────────────
                 data_years = set(int(d[:4]) for d in all_dates)
-
                 min_year = min(data_years)
                 max_year = max(max(data_years), current_year)
-
-                years = list(range(min_year, max_year + 1))
-
                 x_ticks = []
-                for y in years:
+                for y in range(min_year, max_year + 1):
                     year_start = datetime(y, 1, 1).timestamp()
                     x = pad_l + (year_start - min_d) / d_range * cw
-
-                    x_ticks.append({
-                        "x": round(x, 2),
-                        "label": str(y)
-                    })
+                    x_ticks.append({"x": round(x, 2), "label": str(y)})
 
                 chart_meta = {
                     "W": W, "H": H,
