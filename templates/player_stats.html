@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='stat_card.css') }}">
   <style>
     main { display: flex; flex-direction: column; gap: 2rem; }
 
@@ -108,37 +109,6 @@
 
     .popular-btn:hover { border-color: var(--green); }
 
-    /* ── Stat Cards ── */
-    .stat-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-    }
-
-    .stat-card {
-      background: var(--surface);
-      padding: 1.25rem 1rem;
-      text-align: center;
-    }
-
-    .stat-card .val {
-      font-family: var(--mono);
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--green);
-      line-height: 1;
-    }
-
-    .stat-card .lbl {
-      font-family: var(--mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-top: 0.4rem;
-    }
 
     /* ── Chart ── */
     .chart-card {
@@ -205,6 +175,7 @@
     }
   </style>
 </head>
+<script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
 <body>
 
   <header>
@@ -237,11 +208,13 @@
       </div>
 
       {% if not selected_runner %}
-      <p class="popular-label">Popular Searches</p>
+      <p class="popular-label">Top Runners</p>
       <div class="popular-list">
         <a class="popular-btn" href="/stats/player?runner=skycrab1">skycrab1</a>
         <a class="popular-btn" href="/stats/player?runner=Aquacorde">Aquacorde</a>
         <a class="popular-btn" href="/stats/player?runner=lowkey">lowkey</a>
+        <a class="popular-btn" href="/stats/player?runner=Jay12310">Jay12310</a>
+        <a class="popular-btn" href="/stats/player?runner=doogile">doogile</a>
       </div>
       {% endif %}
     </div>
@@ -260,19 +233,19 @@
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub10 }}</div>
-        <div class="lbl">Sub 10</div>
+        <div class="lbl">Runs Tracked (Sub10s)</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub9 }}</div>
-        <div class="lbl">Sub 9</div>
+        <div class="lbl">Sub 9s</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub8 }}</div>
-        <div class="lbl">Sub 8</div>
+        <div class="lbl">Sub 8s</div>
       </div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub7 }}</div>
-        <div class="lbl">Sub 7</div>
+        <div class="lbl">Sub 7s</div>
       </div>
     </div>
 
@@ -292,9 +265,9 @@
             .chart-axis  { stroke: #1e2a1e; stroke-width: 1; }
             .chart-tick  { font-family: 'Share Tech Mono', monospace; font-size: 11px; fill: #5a7a5a; }
             .line-pb     { fill: none; stroke: #4ade80; stroke-width: 2; stroke-linejoin: round; }
-            .line-wr     { fill: none; stroke: #f0c040; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
+            .line-wr     { fill: none; stroke: #d7fae4; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
             .dot-pb      { fill: #4ade80; }
-            .dot-wr      { fill: #f0c040; }
+            .dot-wr      { fill: #d7fae4; }
             .dot-run     { fill: #14532d; /* dark green */ opacity: 0.35; }
           </style>
         </defs>
@@ -319,6 +292,16 @@
         {% endfor %}
         {% endif %}
 
+        {# ── PB step line #}
+        {% if chart_pb_points %}
+        <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% for p in chart_pb_points %}
+          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
+            <title>{{ p.label }}</title>
+          </circle>
+        {% endfor %}
+        {% endif %}
+
         {# ── WR step line #}
         {% if chart_wr_points %}
         <polyline class="line-wr" points="{% for p in chart_wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
@@ -329,15 +312,7 @@
         {% endfor %}
         {% endif %}
 
-        {# ── PB step line #}
-        {% if chart_pb_points %}
-        <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
-        {% for p in chart_pb_points %}
-          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-            <title>{{ p.label }}</title>
-          </circle>
-        {% endfor %}
-        {% endif %}
+
 
         {# ── Non-PB runs (faded dots) #}
         {% if chart_all_points %}
@@ -356,7 +331,7 @@
           {{ selected_runner.name }} PB progression
         </div>
         <div class="chart-legend-item">
-          <div class="legend-dot" style="background:#f0c040"></div>
+          <div class="legend-dot" style="background:#d7fae4"></div>
           World Record
         </div>
       </div>
@@ -421,58 +396,6 @@
   <footer>
     data sourced from <a href="https://docs.google.com/spreadsheets/d/1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo/edit?usp=sharing" target="_blank">my google sheet</a> &nbsp;·&nbsp; generated from <a href="https://github.com/hlswan/MCSR-Database" target="_blank">MCSR-Database</a>
   </footer>
-
-  <script>
-    // ── Autocomplete ──────────────────────────────────────────────────────────
-    const input   = document.getElementById('runner-search');
-    const list    = document.getElementById('autocomplete-list');
-    const items   = Array.from(list.querySelectorAll('.autocomplete-item'));
-    let activeIdx = -1;
-
-    input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
-      let anyVisible = false;
-      activeIdx = -1;
-      items.forEach(el => {
-        const match = q && el.dataset.name.toLowerCase().includes(q);
-        el.style.display = match ? '' : 'none';
-        if (match) anyVisible = true;
-      });
-      list.classList.toggle('open', anyVisible);
-    });
-
-    input.addEventListener('keydown', e => {
-      const visible = items.filter(el => el.style.display !== 'none');
-      if (e.key === 'ArrowDown') {
-        activeIdx = Math.min(activeIdx + 1, visible.length - 1);
-      } else if (e.key === 'ArrowUp') {
-        activeIdx = Math.max(activeIdx - 1, 0);
-      } else if (e.key === 'Enter') {
-        if (activeIdx >= 0 && visible[activeIdx]) {
-          selectRunner(visible[activeIdx].dataset.name);
-        } else if (input.value.trim()) {
-          selectRunner(input.value.trim());
-        }
-        return;
-      } else if (e.key === 'Escape') {
-        list.classList.remove('open');
-        return;
-      }
-      visible.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
-    });
-
-    items.forEach(el => {
-      el.addEventListener('mousedown', () => selectRunner(el.dataset.name));
-    });
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.search-box')) list.classList.remove('open');
-    });
-
-    function selectRunner(name) {
-      window.location.href = '/stats/player?runner=' + encodeURIComponent(name);
-    }
-  </script>
 
 </body>
 </html>

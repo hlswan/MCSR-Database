@@ -103,6 +103,7 @@ def stats_player():
     chart_all_points = []
     chart_meta      = None
     wr_runs_list    = [dict(r) for r in wr_runs]
+    total_run_stats = 0
 
     if runner_name:
         row = db.execute(
@@ -284,6 +285,7 @@ def stats_player():
         chart_all_points=chart_all_points,
         chart_meta=chart_meta,
         runner_name=runner_name,
+        total_run_stats=total_run_stats,
     )
 
 

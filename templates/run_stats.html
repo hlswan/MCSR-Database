@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='stat_card.css') }}">
   <style>
     main {
       display: flex;
@@ -17,13 +18,6 @@
       gap: 0.75rem;
     }
 
-    .coming-soon {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
   </style>
 </head>
 <body>
@@ -39,8 +33,37 @@
   </header>
 
   <main>
-    <p class="coming-soon">Coming soon</p>
-    <a href="/stats" style="font-family: var(--mono); font-size: 0.75rem; color: var(--green); text-decoration: none;">← Back to Stats</a>
+
+    {% if total_run_stats %}
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="val">{{ total_run_stats.pb or '—' }}</div>
+        <div class="lbl">Personal Best</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ '#' + total_run_stats.lb_position|string if total_run_stats.lb_position else '—' }}</div>
+        <div class="lbl">Leaderboard Position</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ total_run_stats.sub10 }}</div>
+        <div class="lbl">Runs Tracked (Sub10s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ total_run_stats.sub9 }}</div>
+        <div class="lbl">Sub 9s</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ total_run_stats.sub8 }}</div>
+        <div class="lbl">Sub 8s</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">{{ total_run_stats.sub7 }}</div>
+        <div class="lbl">Sub 7s</div>
+      </div>
+    </div>
+    
+    {% endif %}
   </main>
 
   <footer>
