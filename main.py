@@ -219,11 +219,17 @@ def parse_date(value: str) -> str | None:
 def parse_bool(value: str) -> bool | None:
     if not value or not value.strip():
         return None
+
+    raw = value
+    value = fix_encoding(value)
     v = value.strip().lower()
+
     if v in ("✔", "yes", "true", "1"):
         return True
     if v in ("x", "✗", "no", "false", "0"):
         return False
+
+    print(f"[WARN] Unknown boolean value: '{raw}' → '{v}'")
     return None
 
 
@@ -774,6 +780,7 @@ def run_pipeline(csv_path: str) -> None:
 
     insert_runs(conn, runs)
     print(f"{info}Insert complete.")
+
 
     preview(conn)
     conn.close()
