@@ -632,6 +632,27 @@ FROM best_runs
 WHERE rn_rank = 1;
 """
 
+CREATE_RUNNER_STATS_SQL = """
+CREATE TABLE IF NOT EXISTS runner_stats (
+    runner_id       INTEGER PRIMARY KEY REFERENCES runners(id),
+    total_runs      INTEGER NOT NULL DEFAULT 0,
+    sub_9           INTEGER NOT NULL DEFAULT 0,
+    sub_8           INTEGER NOT NULL DEFAULT 0,
+    sub_7           INTEGER NOT NULL DEFAULT 0,
+    best_lb_pos     INTEGER           -- NULL if runner has no lb entry
+);
+"""
+
+CREATE_OVERALL_STATS_SQL = """
+CREATE TABLE IF NOT EXISTS overall_stats (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),  -- singleton row
+    total_runs  INTEGER NOT NULL DEFAULT 0,
+    sub_9       INTEGER NOT NULL DEFAULT 0,
+    sub_8       INTEGER NOT NULL DEFAULT 0,
+    sub_7       INTEGER NOT NULL DEFAULT 0
+);
+"""
+
 
 def init_db(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
@@ -641,6 +662,8 @@ def init_db(db_path: str) -> sqlite3.Connection:
     conn.execute(CREATE_CALCULATIONS_VIEW_SQL)
     conn.execute(CREATE_ALL_RUNS_RANKED_SQL)
     conn.execute(CREATE_LEADERBOARD_SQL)
+    conn.execute(CREATE_RUNNER_STATS_SQL)
+    conn.execute(CREATE_OVERALL_STATS_SQL)
     conn.commit()
     return conn
 
@@ -762,6 +785,45 @@ def preview(conn: sqlite3.Connection, n: int = 10):
     print(f"{'='*72}\n")
 
 
+def compute_stats(conn: sqlite3.Connection) -> None:
+    """Populate runner_stats and overall_stats from the runs table."""
+
+    # ── Runner stats ─────────────────────────────────────────────────────────
+    conn.execute("DELETE FROM runner_stats")
+    conn.execute("""
+        INSERT INTO runner_stats (runner_id, total_runs, sub_9, sub_8, sub_7, best_lb_pos)
+        SELECT
+            r.runner_id,
+            COUNT(*)                                                        AS total_runs,
+            SUM(CASE WHEN r.re_timed_time_ms <  9 * 60000 THEN 1 ELSE 0 END) AS sub_9,
+            SUM(CASE WHEN r.re_timed_time_ms <  8 * 60000 THEN 1 ELSE 0 END) AS sub_8,
+            SUM(CASE WHEN r.re_timed_time_ms <  7 * 60000 THEN 1 ELSE 0 END) AS sub_7,
+            lb.lb_position
+        FROM runs r
+        LEFT JOIN leaderboard lb ON lb.runner = (
+            SELECT name FROM runners WHERE id = r.runner_id
+        )
+        GROUP BY r.runner_id
+    """)
+
+    # ── Overall stats ─────────────────────────────────────────────────────────
+    conn.execute("DELETE FROM overall_stats")
+    conn.execute("""
+        INSERT INTO overall_stats (id, total_runs, sub_9, sub_8, sub_7)
+        SELECT
+            1,
+            COUNT(*),
+            SUM(CASE WHEN re_timed_time_ms <  9 * 60000 THEN 1 ELSE 0 END),
+            SUM(CASE WHEN re_timed_time_ms <  8 * 60000 THEN 1 ELSE 0 END),
+            SUM(CASE WHEN re_timed_time_ms <  7 * 60000 THEN 1 ELSE 0 END)
+        FROM runs
+        WHERE re_timed_time_ms IS NOT NULL
+          AND speedrun_com_status != 'Banned'
+    """)
+
+    conn.commit()
+    print("Stats precomputed.")
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run_pipeline(csv_path: str) -> None:
@@ -780,6 +842,8 @@ def run_pipeline(csv_path: str) -> None:
 
     insert_runs(conn, runs)
     print(f"{info}Insert complete.")
+
+    compute_stats(conn)
 
 
     preview(conn)

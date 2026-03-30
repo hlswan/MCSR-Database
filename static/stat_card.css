@@ -14,7 +14,7 @@
 
     .stat-card .val {
       font-family: var(--mono);
-      font-size: 1.6rem;
+      font-size: 2rem;
       font-weight: 700;
       color: var(--green);
       line-height: 1;
@@ -22,7 +22,7 @@
 
     .stat-card .lbl {
       font-family: var(--mono);
-      font-size: 0.62rem;
+      font-size: 1rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       color: var(--muted);

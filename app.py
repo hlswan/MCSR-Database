@@ -294,6 +294,26 @@ def stats_runs():
     return render_template("run_stats.html")
 
 
+@app.route("/graph")
+def graph_page():
+    db = get_db()
+    # Fetch all runs marked as world records
+    wr_runs = db.execute("""
+        SELECT rn.name AS runner, r.re_timed_time_ms as time, r.date
+        FROM runs r
+        JOIN runners rn ON rn.id = r.runner_id
+        WHERE r.is_wr = 1
+          AND r.re_timed_time_ms IS NOT NULL
+          AND r.date IS NOT NULL
+        ORDER BY r.date ASC
+    """).fetchall()
+
+    # Convert sqlite3.Row objects to dictionaries for JSON serialization
+    wr_data = [dict(r) for r in wr_runs]
+
+    return render_template("graph.html", wr_data=wr_data)
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

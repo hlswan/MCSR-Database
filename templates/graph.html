@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph — MCSR Database</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="{{ url_for('static', filename='graph_script.js') }}"></script>
+</head>
+<body>
+    <header>
+        <h1>MCSR Database <span>// Graph</span></h1>
+        <nav><a href="/">Back to Leaderboard</a></nav>
+    </header>
+
+    <main style="padding: 20px;">
+        <div class="controls" style="margin-bottom: 20px; display: flex; gap: 15px;">
+            <label><input type="checkbox" id="show-wr" checked> Show World Record</label>
+            <label><input type="checkbox" id="show-rank2"> Show #2 Trend</label>
+            <input type="text" id="runner-filter" placeholder="Search Runner...">
+        </div>
+
+        <div style="background: var(--surface); border: 1px solid var(--border); padding: 20px; height: 700px;">
+            <canvas id="mcsrChart"></canvas>
+        </div>
+        </div>
+    </main>
+
+
+
+<script>
+    // Initialize the graph once the DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // Safe injection of Flask data into JS
+        const dataFromFlask = {{ wr_data | tojson | safe }};
+        const mcsrChart = initMCSRGraph(dataFromFlask);
+    });
+</script>
+</body>
+</html>
