@@ -6,6 +6,15 @@ Header should be 1.16+ RSG Any% Glitchless
 
 Info icon next to status, igt, and rtt.
 
+Historical data on the leaderboard.
+Time rollback.
+
+Runner stats should also include:
+Number of days spent in top 10 (for now top 10, later do top 50, as well?).
+Graph of leaderboard position over time
+Best leaderboard position.
+Notable achievements section
+
 Update README.md for information about the website.
 Change to grab RAW-DATA from the Sub 8 Leaderboard Sheet instead of SUB-8s.
 
