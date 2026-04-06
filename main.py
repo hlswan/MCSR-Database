@@ -223,6 +223,7 @@ def parse_bool(value: str) -> bool | None:
     raw = value
     value = fix_encoding(value)
     v = value.strip().lower()
+    v = v.strip()
 
     if v in ("✔", "yes", "true", "1"):
         return True
