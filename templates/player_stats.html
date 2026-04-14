@@ -120,7 +120,7 @@
 
     .chart-title {
       font-family: var(--mono);
-      font-size: 0.7rem;
+      font-size: 1rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--muted);
@@ -229,30 +229,48 @@
       </div>
       <div class="stat-card">
         <div class="val">{{ '#' + runner_stats.lb_position|string if runner_stats.lb_position else '—' }}</div>
-        <div class="lbl">Leaderboard Position</div>
+        <div class="lbl">Current Leaderboard Position</div>
       </div>
+        <div class="stat-card peak-rank">
+          <div class="val">
+            {% if runner_stats.best_lb_link %}
+              <a href="{{ runner_stats.best_lb_link }}" target="_blank" style="text-decoration: none; color: inherit;">
+                {{ '#' + runner_stats.best_lb_position|string }}<span style="font-size: 0.8rem; vertical-align: middle; margin-left: 4px; opacity: 0.6;">↗</span>
+              </a>
+            {% else %}
+              {{ '#' + runner_stats.best_lb_position|string if runner_stats.best_lb_position else '—' }}
+            {% endif %}
+          </div>
+  <div class="lbl">Best Leaderboard Position</div>
+</div>
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub10 }}</div>
-        <div class="lbl">Runs Tracked (Sub10)</div>
+        <div class="lbl">Sub 10</div>
       </div>
+        {% if runner_stats.sub9 > 0 %}
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub9 }}</div>
         <div class="lbl">Sub 9</div>
       </div>
+        {% endif %}
+        {% if runner_stats.sub8 > 0 %}
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub8 }}</div>
         <div class="lbl">Sub 8</div>
       </div>
+        {% endif %}
+        {% if runner_stats.sub7 > 0 %}
       <div class="stat-card">
         <div class="val">{{ runner_stats.sub7 }}</div>
         <div class="lbl">Sub 7</div>
       </div>
+      {% endif %}
     </div>
 
     <!-- ── PB Progression Chart ── -->
     {% if chart_meta %}
     <div class="chart-card">
-      <div class="chart-title">PB Progression vs World Record</div>
+      <div class="chart-title">Personal Best vs World Record</div>
 
       {% set W = chart_meta.W %}
       {% set H = chart_meta.H %}
@@ -265,9 +283,7 @@
             .chart-axis  { stroke: #1e2a1e; stroke-width: 1; }
             .chart-tick  { font-family: 'Share Tech Mono', monospace; font-size: 11px; fill: #5a7a5a; }
             .line-pb     { fill: none; stroke: #4ade80; stroke-width: 2; stroke-linejoin: round; }
-            .line-wr     { fill: none; stroke: #d7fae4; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
-            .dot-pb      { fill: #4ade80; }
-            .dot-wr      { fill: #d7fae4; }
+            .line-wr     { fill: none; stroke: #ffd700; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 6 3; }
             .dot-run     { fill: #14532d; /* dark green */ opacity: 0.35; }
           </style>
         </defs>
@@ -292,27 +308,29 @@
         {% endfor %}
         {% endif %}
 
-        {# ── PB step line #}
-        {% if chart_pb_points %}
-        <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
-        {% for p in chart_pb_points %}
-          <circle class="dot-pb" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-            <title>{{ p.label }}</title>
-          </circle>
-        {% endfor %}
-        {% endif %}
+        <polyline points="{% for p in chart_rank5_points %}{{ p.x }},{{ p.y }} {% endfor %}"
+          fill="none" stroke="#14532d" stroke-width="2" stroke-dasharray="4 2" opacity="0.4" />
 
-        {# ── WR step line #}
+        <polyline points="{% for p in chart_rank4_points %}{{ p.x }},{{ p.y }} {% endfor %}"
+          fill="none" stroke="#2e8550" stroke-width="2" stroke-dasharray="4 2" opacity="0.9" />
+
+        <polyline points="{% for p in chart_rank3_points %}{{ p.x }},{{ p.y }} {% endfor %}"
+          fill="none" stroke="#cd7f32" stroke-width="2" stroke-dasharray="4 2" opacity="0.9" />
+
+        <polyline points="{% for p in chart_rank2_points %}{{ p.x }},{{ p.y }} {% endfor %}"
+                  fill="none" stroke="#c0c0c0" stroke-width="2" stroke-dasharray="4 2" opacity="0.9" />
+
+      {# ── WR step line #}
         {% if chart_wr_points %}
         <polyline class="line-wr" points="{% for p in chart_wr_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
-        {% for p in chart_wr_points %}
-          <circle class="dot-wr" cx="{{ p.x }}" cy="{{ p.y }}" r="4">
-            <title>{{ p.label }}</title>
-          </circle>
-        {% endfor %}
         {% endif %}
 
+      {# ── PB step line #}
+      {% if chart_pb_points %}
+        <polyline class="line-pb" points="{% for p in chart_pb_points %}{{ p.x }},{{ p.y }} {% endfor %}" />
+        {% endif %}
 
+<
 
         {# ── Non-PB runs (faded dots) #}
         {% if chart_all_points %}
@@ -328,11 +346,27 @@
       <div class="chart-legend">
         <div class="chart-legend-item">
           <div class="legend-dot" style="background:#4ade80"></div>
-          {{ selected_runner.name }} PB progression
+          {{ selected_runner.name }}
         </div>
         <div class="chart-legend-item">
-          <div class="legend-dot" style="background:#d7fae4"></div>
+          <div class="legend-dot" style="background:#ffd700"></div>
           World Record
+        </div>
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#c0c0c0"></div>
+          2nd Place
+        </div>
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#cd7f32"></div>
+          3rd Place
+        </div>
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#2e8550"></div>
+          4th Place
+        </div>
+        <div class="chart-legend-item">
+          <div class="legend-dot" style="background:#14532d"></div>
+          5th Place
         </div>
       </div>
     </div>

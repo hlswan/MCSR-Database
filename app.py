@@ -83,6 +83,45 @@ def stats_player():
     """).fetchall()
     all_runner_names = [r["name"] for r in all_runners]
 
+    # --- Inside @app.route("/stats/player") ---
+
+    # 1. Fetch EVERY PB ever set, across all runners, sorted by date
+    all_pbs = db.execute("""
+                         SELECT runner_id, re_timed_time_ms, date
+                         FROM runs
+                         WHERE is_pb = 1
+                           AND re_timed_time_ms IS NOT NULL
+                           AND date IS NOT NULL
+                         ORDER BY date ASC
+                         """).fetchall()
+
+    # 2. Track the "Current Top 3" as we move through time
+    rank2_progression = []
+    rank3_progression = []
+    rank4_progression = []
+    rank5_progression = []
+
+    current_best_times = {}  # {runner_id: best_ms}
+
+    for pb in all_pbs:
+        # Update this runner's PB in our "current" state
+        current_best_times[pb['runner_id']] = pb['re_timed_time_ms']
+
+        # Sort all current PBs to see the Top 3 at this moment
+        sorted_leaderboard = sorted(current_best_times.values())
+
+
+        if len(sorted_leaderboard) >= 2:
+            rank2_progression.append({'re_timed_time_ms': sorted_leaderboard[1], 'date': pb['date']})
+        if len(sorted_leaderboard) >= 3:
+            rank3_progression.append({'re_timed_time_ms': sorted_leaderboard[2], 'date': pb['date']})
+        if len(sorted_leaderboard) >= 4:
+            rank4_progression.append({'re_timed_time_ms': sorted_leaderboard[3], 'date': pb['date']})
+        if len(sorted_leaderboard) >= 5:
+            rank5_progression.append({'re_timed_time_ms': sorted_leaderboard[4], 'date': pb['date']})
+
+
+
     # World record progression — all runs marked is_wr, ordered by date
     wr_runs = db.execute("""
         SELECT rn.name AS runner, r.re_timed_time_ms, r.date
@@ -101,6 +140,10 @@ def stats_player():
     chart_pb_points = []
     chart_wr_points = []
     chart_all_points = []
+    chart_rank2_points = []
+    chart_rank3_points = []
+    chart_rank4_points = []
+    chart_rank5_points = []
     chart_meta      = None
     wr_runs_list    = [dict(r) for r in wr_runs]
     total_run_stats = 0
@@ -152,15 +195,37 @@ def stats_player():
                 ORDER BY date ASC
             """, (runner_id,)).fetchall()
 
+
+            # Calculate the historical rank for every PB and find the best one + its link
+            peak_data = db.execute("""
+                                   WITH pb_ranks AS (SELECT r1.link,
+                                                            r1.re_timed_time_ms,
+                                                            CASE
+                                                                WHEN r1.is_wr = 1 THEN 1
+                                                                ELSE (SELECT COUNT(DISTINCT r2.runner_id) + 1
+                                                                      FROM runs r2
+                                                                      WHERE r2.re_timed_time_ms < r1.re_timed_time_ms
+                                                                        AND r2.date <= r1.date)
+                                                                END AS historical_rank
+                                                     FROM runs r1
+                                                     WHERE r1.runner_id = ?
+                                                       AND r1.is_pb = 1)
+                                   SELECT historical_rank, link
+                                   FROM pb_ranks
+                                   ORDER BY historical_rank ASC, re_timed_time_ms ASC LIMIT 1
+                                   """, (runner_id,)).fetchone()
+
             runner_stats = {
                 "lb_position": lb_row["lb_position"] if lb_row else None,
-                "pb":          lb_row["re_timed_time_raw"] if lb_row else None,
-                "pb_ms":       lb_row["re_timed_time_ms"] if lb_row else None,
-                "total":       sub_counts["total"],
-                "sub10":       sub_counts["sub10"] or 0,
-                "sub9":        sub_counts["sub9"]  or 0,
-                "sub8":        sub_counts["sub8"]  or 0,
-                "sub7":        sub_counts["sub7"]  or 0,
+                "best_lb_position": peak_data["historical_rank"] if peak_data else None,
+                "best_lb_link": peak_data["link"] if peak_data else None,  # New field
+                "pb": lb_row["re_timed_time_raw"] if lb_row else None,
+                "pb_ms": lb_row["re_timed_time_ms"] if lb_row else None,
+                "total": sub_counts["total"],
+                "sub10": sub_counts["sub10"] or 0,
+                "sub9": sub_counts["sub9"] or 0,
+                "sub8": sub_counts["sub8"] or 0,
+                "sub7": sub_counts["sub7"] or 0,
             }
 
             pb_progression = [dict(r) for r in pb_progression_rows]
@@ -229,6 +294,10 @@ def stats_player():
 
                 chart_pb_points = build_step_points(pb_progression, "PB")
                 chart_wr_points = build_step_points(wr_runs_list, "WR")
+                chart_rank2_points = build_step_points(rank2_progression, "2nd Place")
+                chart_rank3_points = build_step_points(rank3_progression, "3rd Place")
+                chart_rank4_points = build_step_points(rank4_progression, "4th Place")
+                chart_rank5_points = build_step_points(rank5_progression, "5th Place")
 
                 # ── Non-PB runs (faded dots)
                 chart_all_points = []
@@ -282,10 +351,15 @@ def stats_player():
         wr_runs=wr_runs_list,
         chart_pb_points=chart_pb_points,
         chart_wr_points=chart_wr_points,
+        chart_rank2_points=chart_rank2_points,
+        chart_rank3_points=chart_rank3_points,
+        chart_rank4_points=chart_rank4_points,
+        chart_rank5_points=chart_rank5_points,
         chart_all_points=chart_all_points,
         chart_meta=chart_meta,
         runner_name=runner_name,
         total_run_stats=total_run_stats,
+
     )
 
 

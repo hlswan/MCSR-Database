@@ -255,10 +255,10 @@ td.link a:hover {
 /* ── Stats page ──────────────────────────────────────────────────────────── */
 
 .chart-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
 }
 
 .chart-wrap {
