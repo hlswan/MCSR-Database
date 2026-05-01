@@ -76,29 +76,29 @@ COL = {
     "in_game_time":                4,
     "re_timed_time":               5,
     "date":                        6,
-    "days_since":                  8,
-    "speedrun_com_status":         9,
-    "seed":                       10,
-    "instances_deprecated":       11,
-    "used_calculator_deprecated": 12,
-    "link":                       13,
-    "minutes":                    14,
-    "seconds":                    15,
-    "milliseconds":               16,
-    "total_milliseconds":         17,
-    "total_seconds":              18,
-    "rounding":                   19,
-    "current_wr":                 20,
-    "current_wr_normal_time":     21,
-    "wr_at_time":                 23,
-    "normal_time":                24,
-    "decay":                      25,
-    "weight":                     26,
-    "k":                          27,
-    "run_score":                  28,
-    "non_weighted_run_score":     29,
-    "current_run_score":          30,
-    "dynamic_k":                  31,
+    "days_since":                  7,
+    "speedrun_com_status":         8,
+    "seed":                        9,
+    "instances_deprecated":       10,
+    "used_calculator_deprecated": 11,
+    "link":                       12,
+    "minutes":                    13,
+    "seconds":                    14,
+    "milliseconds":               15,
+    "total_milliseconds":         16,
+    "total_seconds":              17,
+    "rounding":                   18,
+    "current_wr":                 19,
+    "current_wr_normal_time":     20,
+    "wr_at_time":                 21,
+    "normal_time":                22,
+    "decay":                      23,
+    "weight":                     24,
+    "k":                          25,
+    "run_score":                  26,
+    "non_weighted_run_score":     27,
+    "current_run_score":          28,
+    "dynamic_k":                  29,
     # ── Split data (only ~first 50 runs) ──────────────────────────────────────
     "iron_source":                34,
     "has_tnt":                    35,
@@ -158,20 +158,6 @@ def safe_get(row: list, index: int) -> str:
         return ""
 
 
-def fix_encoding(value: str) -> str:
-    """Fix double-encoded UTF-8 emoji/text (e.g. flag emoji mangled on CSV export).
-    Google Sheets sometimes exports UTF-8 bytes interpreted as latin-1, resulting
-    in strings like 'ð\x9f\x87¨' instead of '🇨'. Reversing the mis-encode fixes it.
-    Falls back to the original string if decoding fails.
-    """
-    if not value:
-        return value
-    try:
-        return value.encode('latin-1').decode('utf-8')
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        return value
-
-
 
 def parse_time_to_ms(value: str) -> int | None:
     """Convert 'M:SS.mmm' or 'H:MM:SS.mmm' to total milliseconds."""
@@ -210,7 +196,6 @@ def parse_bool(value: str) -> bool | None:
         return None
 
     raw = value
-    value = fix_encoding(value)
     v = value.strip().lower()
     v = v.strip()
 
@@ -263,7 +248,6 @@ def clean_row(row: list) -> dict | None:
     igt_raw = safe_get(row, COL["in_game_time"]).strip()
     if not igt_raw:
         return None
-
 
 
     return {
