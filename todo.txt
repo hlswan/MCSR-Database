@@ -1,6 +1,5 @@
 **Bugs**
 
-Header should be 1.16+ RSG Any% Glitchless
 
 **Features(kinda in order)**
 
@@ -11,15 +10,12 @@ Time rollback.
 
 Runner stats should also include:
 Number of days spent in top 10 (for now top 10, later do top 50, as well?).
-Graph of leaderboard position over time
-Best leaderboard position.
 Notable achievements section
 
 Update README.md for information about the website.
-Change to grab RAW-DATA from the Sub 8 Leaderboard Sheet instead of SUB-8s.
 
 Fetch PaceMan finishes and add them to the Google Sheet.
 
-Fetch if skycrab adds to his playlist and add those run's links to the sheet/database
+Fetch if skycrab1 adds to his playlist and add those run's links to the sheet/database
 
-Keep track of each runners yt, then check automatically if they upload a video to automatically grab the link.
+Keep track of each runner's yt, then check automatically if they upload a video to automatically grab the link, not sure if this is possible.

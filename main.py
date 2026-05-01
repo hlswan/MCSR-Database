@@ -434,9 +434,19 @@ def load_csv(path: str) -> list[dict]:
 
 CREATE_RUNNERS_SQL = """
 CREATE TABLE IF NOT EXISTS runners (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name    TEXT NOT NULL UNIQUE,
-    flag    TEXT            -- country flag emoji, nullable
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                TEXT NOT NULL UNIQUE,
+    flag                TEXT,               -- country flag emoji, nullable
+    -- Cached stats (populated by compute_runner_columns after every import)
+    pb_ms               INTEGER,            -- personal best in milliseconds
+    pb_raw              TEXT,               -- personal best display string e.g. "6:48.508"
+    lb_position         INTEGER,            -- current leaderboard position (NULL if not on LB)
+    best_lb_position    INTEGER,            -- historical peak leaderboard position
+    sub10               INTEGER NOT NULL DEFAULT 0,  -- runs with re_timed < 10:00
+    sub9                INTEGER NOT NULL DEFAULT 0,  -- runs with re_timed < 9:00
+    sub8                INTEGER NOT NULL DEFAULT 0,  -- runs with re_timed < 8:00
+    sub7                INTEGER NOT NULL DEFAULT 0,  -- runs with re_timed < 7:00
+    days_top10          INTEGER NOT NULL DEFAULT 0   -- calendar days spent in top 10
 );
 """
 
@@ -780,6 +790,143 @@ def compute_stats(conn: sqlite3.Connection) -> None:
 
 
 
+# ── Runner column computation ─────────────────────────────────────────────────
+
+def compute_runner_columns(conn: sqlite3.Connection) -> None:
+    """
+    Populate the cached stat columns on the runners table:
+        pb_ms, pb_raw, lb_position, best_lb_position,
+        sub10, sub9, sub8, sub7, days_top10
+
+    This replays the full PB history in chronological order so that
+    best_lb_position and days_top10 reflect historical leaderboard state
+    rather than the current snapshot alone.
+    """
+    print("  [INFO] Computing runner stat columns…")
+
+    # ── 1. Simple per-runner aggregates (single UPDATE) ───────────────────────
+    conn.execute("""
+        UPDATE runners SET
+            pb_ms = (
+                SELECT MIN(re_timed_time_ms)
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+            ),
+            pb_raw = (
+                SELECT re_timed_time_raw
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+                ORDER BY re_timed_time_ms ASC
+                LIMIT 1
+            ),
+            lb_position = (
+                SELECT lb_position
+                FROM leaderboard
+                WHERE runner = runners.name
+            ),
+            sub10 = (
+                SELECT COUNT(*)
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+                  AND re_timed_time_ms < 600000
+            ),
+            sub9 = (
+                SELECT COUNT(*)
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+                  AND re_timed_time_ms < 540000
+            ),
+            sub8 = (
+                SELECT COUNT(*)
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+                  AND re_timed_time_ms < 480000
+            ),
+            sub7 = (
+                SELECT COUNT(*)
+                FROM runs
+                WHERE runner_id = runners.id
+                  AND re_timed_time_ms IS NOT NULL
+                  AND re_timed_time_ms < 420000
+            )
+    """)
+
+    # ── 2. Historical replay for best_lb_position and days_top10 ─────────────
+    # Fetch all PB runs in chronological order.
+    pbs = conn.execute("""
+        SELECT runner_id, re_timed_time_ms, date
+        FROM runs
+        WHERE is_pb = 1
+          AND re_timed_time_ms IS NOT NULL
+          AND date IS NOT NULL
+        ORDER BY date ASC, re_timed_time_ms ASC
+    """).fetchall()
+
+    current_bests: dict[int, int] = {}   # runner_id -> best ms seen so far
+    best_ranks:    dict[int, int] = {}   # runner_id -> best rank ever achieved
+    # date -> leaderboard snapshot (runner_id -> best_ms) at end of that date
+    date_snapshots: dict[str, dict[int, int]] = {}
+
+    for runner_id, ms, date in pbs:
+        # Keep only improving times (a PB flag in the sheet should guarantee
+        # this, but guard anyway in case of data quirks).
+        if runner_id not in current_bests or ms < current_bests[runner_id]:
+            current_bests[runner_id] = ms
+
+        # Snapshot after processing this event date
+        date_snapshots[date] = dict(current_bests)
+
+        # Recompute ranks for all runners with a time so far
+        sorted_runners = sorted(current_bests.items(), key=lambda x: x[1])
+        for rank, (rid, _) in enumerate(sorted_runners, 1):
+            if rid not in best_ranks or rank < best_ranks[rid]:
+                best_ranks[rid] = rank
+
+    # ── 3. days_top10 ─────────────────────────────────────────────────────────
+    # For each interval [event_date, next_event_date), count the days and credit
+    # every runner who was in the top 10 at the start of that interval.
+    from collections import defaultdict
+    days_top10: dict[int, int] = defaultdict(int)
+
+    today = datetime.now().date()
+    sorted_dates = sorted(date_snapshots.keys())
+
+    for i, date in enumerate(sorted_dates):
+        snapshot = date_snapshots[date]
+        sorted_lb = sorted(snapshot.items(), key=lambda x: x[1])
+        top10_ids = {rid for rid, _ in sorted_lb[:10]}
+
+        d1 = datetime.strptime(date, "%Y-%m-%d").date()
+        if i + 1 < len(sorted_dates):
+            d2 = datetime.strptime(sorted_dates[i + 1], "%Y-%m-%d").date()
+        else:
+            d2 = today
+        days = (d2 - d1).days
+
+        for rid in top10_ids:
+            days_top10[rid] += days
+
+    # ── 4. Write best_lb_position and days_top10 back to the runners table ────
+    for runner_id in conn.execute("SELECT id FROM runners").fetchall():
+        rid = runner_id[0]
+        conn.execute(
+            "UPDATE runners SET best_lb_position = ?, days_top10 = ? WHERE id = ?",
+            (
+                best_ranks.get(rid),       # None if runner has no dated PBs
+                days_top10.get(rid, 0),
+                rid,
+            ),
+        )
+
+    conn.commit()
+    print("  [INFO] Runner stat columns updated.")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run_pipeline(csv_path: str) -> None:
@@ -800,7 +947,7 @@ def run_pipeline(csv_path: str) -> None:
     print(f"{info}Insert complete.")
 
     compute_stats(conn)
-
+    compute_runner_columns(conn)
 
     preview(conn)
     conn.close()
