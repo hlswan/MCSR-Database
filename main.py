@@ -39,6 +39,7 @@ def download_sheet(url: str) -> str:
     print(f"Downloading sheet from Google Sheets...")
     response  = requests.get(url, timeout=30)
     response.raise_for_status()
+    response.encoding = 'utf-8'
 
     content = response.text
     if content.strip().startswith("<!DOCTYPE") or content.strip().startswith("<html"):
