@@ -11,11 +11,11 @@ import requests
 
 DB_PATH   = os.path.join("data", "leaderboard.db")
 
-# Google Sheets — SUB-8 leaderboard tab (gid=1452671563)
+# Google Sheets — SUB-8 leaderboard tab (gid=1776302876)
 SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/"
     "1zgmOYJBULyHLqs9lGB6-cO4QhRoJdgOpd9WpUWpILYo"
-    "/export?format=csv&gid=1452671563"
+    "/export?format=csv&gid=1776302876"
 )
 
 
@@ -45,7 +45,7 @@ def download_sheet(url: str) -> str:
         raise ValueError("Got HTML instead of CSV — sheet may not be public.")
 
     # Delete any previously downloaded RSG-*.csv files
-    for old in glob.glob(os.path.join("data", "RSG-*.csv")):
+    for old in glob.glob(os.path.join("data", "*.csv")):
         if old != dest:
             os.remove(old)
             print(f"  Deleted old file: {old}")
@@ -68,76 +68,84 @@ def download_sheet(url: str) -> str:
 # All other columns are fixed regardless of the shift.
 
 COL = {
-    # cols 3/4/5 handled by parse_runner_cols()
-    "is_wr":                     6,
-    "is_pb":                     7,
-    "in_game_time":              8,
-    "re_timed_time":             9,
-    "date":                     10,
-    "speedrun_com_status":      11,
-    "seed":                     12,
-    "instances":                13,
-    "used_calculator":          14,
-    "link":                     15,
-    # ── Split data (only ~first 28 runs) ──────────────────────────────────────
-    "overworld_type":           17,
-    "used_tnt":                 18,
-    "portal_type":              19,
-    "nether_enter":             20,
-    "ne_to_s1":                 21,
-    "s1_enter":                 22,
-    "s1_type":                  23,
-    "s1_exit":                  25,
-    "s1_to_s2":                 26,
-    "s2_enter":                 27,
-    "s2_type":                  28,
-    "s2_exit":                  30,
-    "rods_dropped":             32,
-    "blazes_killed":            33,
-    "s2_to_e1":                 35,
-    "all_rods_before_e1":       36,
-    "num_nether_exits":         37,
-    "nether_exit_1":            38,
-    "exit_1_type":              39,
-    "triangulation_split":      40,
-    "eyes_thrown":              41,
-    "eyes_broken":              42,
-    "eyes_left":                43,
-    "reenter":                  45,
-    "reenter_to_e2":            46,
-    "stronghold_distance":      47,
-    "nether_exit_2":            48,
-    "theoretical_blind":        49,
-    "nether_split":             50,
-    "total_nether":             51,
-    "total_ow2":                52,
-    "post_blind":               53,
-    "s2_exit_to_stronghold":    55,
-    "stronghold_enter":         56,
-    "nav_strat":                57,
-    "portal_frames_filled":     59,
-    "end_enter":                60,
-    "end_strat":                61,
-    "explosives_used":          62,
-    "zero_explosives_used":     63,
-    "perch_explosives_used":    64,
-    "end_platform":             65,
-    "dragon_node":              66,
-    "tower_height":             67,
-    "tower_name":               68,
-    "standing_height":          69,
-    "credits":                  71,
-    "bastion_type":             72,
-    "bastion_route":            73,
-    "chests_checked":           74,
-    "bastion_generation_info":  75,
-    "loot_obsidian":            76,
-    "loot_string":              77,
-    "loot_glowstone":           78,
-    "loot_arrows":              79,
-    "loot_pearls":              80,
-    "loot_crying_obsidian":     81,
-    "timeloss":                 82,
+    "flag":                        0,
+    "runner_name":                 1,
+    "is_wr":                       2,
+    "is_pb":                       3,
+    "in_game_time":                4,
+    "re_timed_time":               5,
+    "date":                        6,
+    "days_since":                  8,
+    "speedrun_com_status":         9,
+    "seed":                       10,
+    "instances_deprecated":       11,
+    "used_calculator_deprecated": 12,
+    "link":                       13,
+    "minutes":                    14,
+    "seconds":                    15,
+    "milliseconds":               16,
+    "total_milliseconds":         17,
+    "total_seconds":              18,
+    "rounding":                   19,
+    "current_wr":                 20,
+    "current_wr_normal_time":     21,
+    "wr_at_time":                 23,
+    "normal_time":                24,
+    "decay":                      25,
+    "weight":                     26,
+    "k":                          27,
+    "run_score":                  28,
+    "non_weighted_run_score":     29,
+    "current_run_score":          30,
+    "dynamic_k":                  31,
+    # ── Split data (only ~first 50 runs) ──────────────────────────────────────
+    "iron_source":                34,
+    "has_tnt":                    35,
+    "enter_type":                 36,
+    "enter_time":                 37,
+    "enter_structure1_split":     38,
+    "structure1_time":            39,
+    "structure1_type":            40,
+    "structure1_split":           41,
+    "structure1_exit_time":       42,
+    "structure1_structure2_split":43,
+    "structure2_time":            44,
+    "structure2_type":            45,
+    "structure2_split":           46,
+    # ── todo update split data beyond this(later) ──────────────────────────────────────
+    "stronghold_distance":        47,
+    "nether_exit_2":              48,
+    "theoretical_blind":          49,
+    "nether_split":               50,
+    "total_nether":               51,
+    "total_ow2":                  52,
+    "post_blind":                 53,
+    "s2_exit_to_stronghold":      55,
+    "stronghold_enter":           56,
+    "nav_strat":                  57,
+    "portal_frames_filled":       59,
+    "end_enter":                  60,
+    "end_strat":                  61,
+    "explosives_used":            62,
+    "zero_explosives_used":       63,
+    "perch_explosives_used":      64,
+    "end_platform":               65,
+    "dragon_node":                66,
+    "tower_height":               67,
+    "tower_name":                 68,
+    "standing_height":            69,
+    "credits":                    71,
+    "bastion_type":               72,
+    "bastion_route":              73,
+    "chests_checked":             74,
+    "bastion_generation_info":    75,
+    "loot_obsidian":              76,
+    "loot_string":                77,
+    "loot_glowstone":             78,
+    "loot_arrows":                79,
+    "loot_pearls":                80,
+    "loot_crying_obsidian":       81,
+    "timeloss":                   82,
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -162,26 +170,6 @@ def fix_encoding(value: str) -> str:
     except (UnicodeEncodeError, UnicodeDecodeError):
         return value
 
-
-def parse_runner_cols(row: list) -> tuple[str | None, str | None]:
-    """
-    Resolve the runner name and flag regardless of column shift.
-
-    First appearance (fastest run):  col[3]=flag, col[4]=runner, col[5]=blank
-    Later appearances (slower runs): col[3]=blank, col[4]=flag,  col[5]=runner
-
-    Returns: (runner_name, flag)
-    """
-    col3 = safe_get(row, 3).strip()
-    col4 = safe_get(row, 4).strip()
-    col5 = safe_get(row, 5).strip()
-
-    if col5:
-        # Shifted layout: col4=flag, col5=runner
-        return col5 or None, fix_encoding(col4) or None
-    else:
-        # Normal layout: col3=flag, col4=runner
-        return col4 or None, fix_encoding(col3) or None
 
 
 def parse_time_to_ms(value: str) -> int | None:
@@ -275,84 +263,82 @@ def clean_row(row: list) -> dict | None:
     if not igt_raw:
         return None
 
-    runner_name, flag = parse_runner_cols(row)
+
 
     return {
         # ── Core run info ─────────────────────────────────────────────────────
-        "runner":                   runner_name,
-        "flag":                     flag,
+        "runner":                   safe_get(row, COL["runner_name"]).strip(),
+        "flag":                     safe_get(row, COL["flag"]).strip(),
         "is_wr":                    parse_bool(safe_get(row, COL["is_wr"])),
         "is_pb":                    parse_bool(safe_get(row, COL["is_pb"])),
         "in_game_time_ms":          parse_time_to_ms(igt_raw),
-        "in_game_time_raw":         igt_raw,
+        "in_game_time_raw":         safe_get(row, COL["in_game_time"]).strip() or None,
         "re_timed_time_ms":         parse_time_to_ms(safe_get(row, COL["re_timed_time"])),
         "re_timed_time_raw":        safe_get(row, COL["re_timed_time"]).strip() or None,
         "date":                     parse_date(safe_get(row, COL["date"])),
         "date_raw":                 safe_get(row, COL["date"]).replace("\xa0", " ").strip() or None,
         "speedrun_com_status":      parse_status(safe_get(row, COL["speedrun_com_status"])),
         "seed":                     safe_get(row, COL["seed"]).strip() or None,
-        "instances":                safe_get(row, COL["instances"]).strip() or None,
-        "used_calculator":          safe_get(row, COL["used_calculator"]).strip() or None,
         "link":                     safe_get(row, COL["link"]).strip() or None,
-        # ── Split data (NULL if not recorded) ─────────────────────────────────
-        "overworld_type":               safe_get(row, COL["overworld_type"]).strip() or None,
-        "used_tnt":                     parse_bool(safe_get(row, COL["used_tnt"])),
-        "portal_type":                  safe_get(row, COL["portal_type"]).strip() or None,
-        "nether_enter_ms":              parse_time_to_ms(safe_get(row, COL["nether_enter"])),
-        "ne_to_s1_ms":                  parse_time_to_ms(safe_get(row, COL["ne_to_s1"])),
-        "s1_enter_ms":                  parse_time_to_ms(safe_get(row, COL["s1_enter"])),
-        "s1_type":                      safe_get(row, COL["s1_type"]).strip() or None,
-        "s1_exit_ms":                   parse_time_to_ms(safe_get(row, COL["s1_exit"])),
-        "s1_to_s2_ms":                  parse_time_to_ms(safe_get(row, COL["s1_to_s2"])),
-        "s2_enter_ms":                  parse_time_to_ms(safe_get(row, COL["s2_enter"])),
-        "s2_type":                      safe_get(row, COL["s2_type"]).strip() or None,
-        "s2_exit_ms":                   parse_time_to_ms(safe_get(row, COL["s2_exit"])),
-        "rods_dropped":                 parse_int(safe_get(row, COL["rods_dropped"])),
-        "blazes_killed":                parse_int(safe_get(row, COL["blazes_killed"])),
-        "s2_to_e1_ms":                  parse_time_to_ms(safe_get(row, COL["s2_to_e1"])),
-        "all_rods_before_e1":           safe_get(row, COL["all_rods_before_e1"]).strip() or None,
-        "num_nether_exits":             parse_int(safe_get(row, COL["num_nether_exits"])),
-        "nether_exit_1_ms":             parse_time_to_ms(safe_get(row, COL["nether_exit_1"])),
-        "exit_1_type":                  safe_get(row, COL["exit_1_type"]).strip() or None,
-        "triangulation_split_ms":       parse_time_to_ms(safe_get(row, COL["triangulation_split"])),
-        "eyes_thrown":                  parse_int(safe_get(row, COL["eyes_thrown"])),
-        "eyes_broken":                  parse_int(safe_get(row, COL["eyes_broken"])),
-        "eyes_left":                    parse_int(safe_get(row, COL["eyes_left"])),
-        "reenter_ms":                   parse_time_to_ms(safe_get(row, COL["reenter"])),
-        "reenter_to_e2_ms":             parse_time_to_ms(safe_get(row, COL["reenter_to_e2"])),
-        "stronghold_distance":          parse_int(safe_get(row, COL["stronghold_distance"])),
-        "nether_exit_2_ms":             parse_time_to_ms(safe_get(row, COL["nether_exit_2"])),
-        "theoretical_blind_ms":         parse_time_to_ms(safe_get(row, COL["theoretical_blind"])),
-        "nether_split_ms":              parse_time_to_ms(safe_get(row, COL["nether_split"])),
-        "total_nether_ms":              parse_time_to_ms(safe_get(row, COL["total_nether"])),
-        "total_ow2_ms":                 parse_time_to_ms(safe_get(row, COL["total_ow2"])),
-        "post_blind_ms":                parse_time_to_ms(safe_get(row, COL["post_blind"])),
-        "s2_exit_to_stronghold_ms":     parse_time_to_ms(safe_get(row, COL["s2_exit_to_stronghold"])),
-        "stronghold_enter_ms":          parse_time_to_ms(safe_get(row, COL["stronghold_enter"])),
-        "nav_strat":                    safe_get(row, COL["nav_strat"]).strip() or None,
-        "portal_frames_filled":         parse_int(safe_get(row, COL["portal_frames_filled"])),
-        "end_enter_ms":                 parse_time_to_ms(safe_get(row, COL["end_enter"])),
-        "end_strat":                    safe_get(row, COL["end_strat"]).strip() or None,
-        "explosives_used":              parse_int(safe_get(row, COL["explosives_used"])),
-        "zero_explosives_used":         parse_int(safe_get(row, COL["zero_explosives_used"])),
-        "perch_explosives_used":        parse_int(safe_get(row, COL["perch_explosives_used"])),
-        "end_platform":                 safe_get(row, COL["end_platform"]).strip() or None,
-        "dragon_node":                  safe_get(row, COL["dragon_node"]).strip() or None,
-        "tower_height":                 safe_get(row, COL["tower_height"]).strip() or None,
-        "tower_name":                   safe_get(row, COL["tower_name"]).strip() or None,
-        "standing_height":              safe_get(row, COL["standing_height"]).strip() or None,
-        "credits_ms":                   parse_time_to_ms(safe_get(row, COL["credits"])),
-        "bastion_type":                 safe_get(row, COL["bastion_type"]).strip() or None,
-        "bastion_route":                safe_get(row, COL["bastion_route"]).strip() or None,
-        "chests_checked":               safe_get(row, COL["chests_checked"]).strip() or None,
-        "bastion_generation_info":      safe_get(row, COL["bastion_generation_info"]).strip() or None,
-        "loot_obsidian":                parse_int(safe_get(row, COL["loot_obsidian"])),
-        "loot_string":                  parse_int(safe_get(row, COL["loot_string"])),
-        "loot_glowstone":               parse_int(safe_get(row, COL["loot_glowstone"])),
-        "loot_arrows":                  parse_int(safe_get(row, COL["loot_arrows"])),
-        "loot_pearls":                  parse_int(safe_get(row, COL["loot_pearls"])),
-        "loot_crying_obsidian":         parse_int(safe_get(row, COL["loot_crying_obsidian"])),
-        "timeloss":                     safe_get(row, COL["timeloss"]).strip() or None,
+      # # ── Split data (NULL if not recorded) ─────────────────────────────────
+      # "overworld_type":               safe_get(row, COL["overworld_type"]).strip() or None,
+      # "used_tnt":                     parse_bool(safe_get(row, COL["used_tnt"])),
+      # "portal_type":                  safe_get(row, COL["portal_type"]).strip() or None,
+      # "nether_enter_ms":              parse_time_to_ms(safe_get(row, COL["nether_enter"])),
+      # "ne_to_s1_ms":                  parse_time_to_ms(safe_get(row, COL["ne_to_s1"])),
+      # "s1_enter_ms":                  parse_time_to_ms(safe_get(row, COL["s1_enter"])),
+      # "s1_type":                      safe_get(row, COL["s1_type"]).strip() or None,
+      # "s1_exit_ms":                   parse_time_to_ms(safe_get(row, COL["s1_exit"])),
+      # "s1_to_s2_ms":                  parse_time_to_ms(safe_get(row, COL["s1_to_s2"])),
+      # "s2_enter_ms":                  parse_time_to_ms(safe_get(row, COL["s2_enter"])),
+      # "s2_type":                      safe_get(row, COL["s2_type"]).strip() or None,
+      # "s2_exit_ms":                   parse_time_to_ms(safe_get(row, COL["s2_exit"])),
+      # "rods_dropped":                 parse_int(safe_get(row, COL["rods_dropped"])),
+      # "blazes_killed":                parse_int(safe_get(row, COL["blazes_killed"])),
+      # "s2_to_e1_ms":                  parse_time_to_ms(safe_get(row, COL["s2_to_e1"])),
+      # "all_rods_before_e1":           safe_get(row, COL["all_rods_before_e1"]).strip() or None,
+      # "num_nether_exits":             parse_int(safe_get(row, COL["num_nether_exits"])),
+      # "nether_exit_1_ms":             parse_time_to_ms(safe_get(row, COL["nether_exit_1"])),
+      # "exit_1_type":                  safe_get(row, COL["exit_1_type"]).strip() or None,
+      # "triangulation_split_ms":       parse_time_to_ms(safe_get(row, COL["triangulation_split"])),
+      # "eyes_thrown":                  parse_int(safe_get(row, COL["eyes_thrown"])),
+      # "eyes_broken":                  parse_int(safe_get(row, COL["eyes_broken"])),
+      # "eyes_left":                    parse_int(safe_get(row, COL["eyes_left"])),
+      # "reenter_ms":                   parse_time_to_ms(safe_get(row, COL["reenter"])),
+      # "reenter_to_e2_ms":             parse_time_to_ms(safe_get(row, COL["reenter_to_e2"])),
+      # "stronghold_distance":          parse_int(safe_get(row, COL["stronghold_distance"])),
+      # "nether_exit_2_ms":             parse_time_to_ms(safe_get(row, COL["nether_exit_2"])),
+      # "theoretical_blind_ms":         parse_time_to_ms(safe_get(row, COL["theoretical_blind"])),
+      # "nether_split_ms":              parse_time_to_ms(safe_get(row, COL["nether_split"])),
+      # "total_nether_ms":              parse_time_to_ms(safe_get(row, COL["total_nether"])),
+      # "total_ow2_ms":                 parse_time_to_ms(safe_get(row, COL["total_ow2"])),
+      # "post_blind_ms":                parse_time_to_ms(safe_get(row, COL["post_blind"])),
+      # "s2_exit_to_stronghold_ms":     parse_time_to_ms(safe_get(row, COL["s2_exit_to_stronghold"])),
+      # "stronghold_enter_ms":          parse_time_to_ms(safe_get(row, COL["stronghold_enter"])),
+      # "nav_strat":                    safe_get(row, COL["nav_strat"]).strip() or None,
+      # "portal_frames_filled":         parse_int(safe_get(row, COL["portal_frames_filled"])),
+      # "end_enter_ms":                 parse_time_to_ms(safe_get(row, COL["end_enter"])),
+      # "end_strat":                    safe_get(row, COL["end_strat"]).strip() or None,
+      # "explosives_used":              parse_int(safe_get(row, COL["explosives_used"])),
+      # "zero_explosives_used":         parse_int(safe_get(row, COL["zero_explosives_used"])),
+      # "perch_explosives_used":        parse_int(safe_get(row, COL["perch_explosives_used"])),
+      # "end_platform":                 safe_get(row, COL["end_platform"]).strip() or None,
+      # "dragon_node":                  safe_get(row, COL["dragon_node"]).strip() or None,
+      # "tower_height":                 safe_get(row, COL["tower_height"]).strip() or None,
+      # "tower_name":                   safe_get(row, COL["tower_name"]).strip() or None,
+      # "standing_height":              safe_get(row, COL["standing_height"]).strip() or None,
+      # "credits_ms":                   parse_time_to_ms(safe_get(row, COL["credits"])),
+      # "bastion_type":                 safe_get(row, COL["bastion_type"]).strip() or None,
+      # "bastion_route":                safe_get(row, COL["bastion_route"]).strip() or None,
+      # "chests_checked":               safe_get(row, COL["chests_checked"]).strip() or None,
+      # "bastion_generation_info":      safe_get(row, COL["bastion_generation_info"]).strip() or None,
+      # "loot_obsidian":                parse_int(safe_get(row, COL["loot_obsidian"])),
+      # "loot_string":                  parse_int(safe_get(row, COL["loot_string"])),
+      # "loot_glowstone":               parse_int(safe_get(row, COL["loot_glowstone"])),
+      # "loot_arrows":                  parse_int(safe_get(row, COL["loot_arrows"])),
+      # "loot_pearls":                  parse_int(safe_get(row, COL["loot_pearls"])),
+      # "loot_crying_obsidian":         parse_int(safe_get(row, COL["loot_crying_obsidian"])),
+      # "timeloss":                     safe_get(row, COL["timeloss"]).strip() or None,
     }
 
 
@@ -432,7 +418,7 @@ def load_csv(path: str) -> list[dict]:
     # New CSV format: 3 header rows each followed by a blank row (6 rows total),
     # then data rows also separated by blank rows. We skip the first 6 rows and
     # filter out any subsequent blank rows before parsing.
-    data_rows = [r for r in rows[6:] if any(c.strip() for c in r)]
+    data_rows = [r for r in rows[1:] if any(c.strip() for c in r)]
 
     runs = []
     all_issues: set[str] = set()
@@ -807,23 +793,7 @@ def compute_stats(conn: sqlite3.Connection) -> None:
         GROUP BY r.runner_id
     """)
 
-    # ── Overall stats ─────────────────────────────────────────────────────────
-    conn.execute("DELETE FROM overall_stats")
-    conn.execute("""
-        INSERT INTO overall_stats (id, total_runs, sub_9, sub_8, sub_7)
-        SELECT
-            1,
-            COUNT(*),
-            SUM(CASE WHEN re_timed_time_ms <  9 * 60000 THEN 1 ELSE 0 END),
-            SUM(CASE WHEN re_timed_time_ms <  8 * 60000 THEN 1 ELSE 0 END),
-            SUM(CASE WHEN re_timed_time_ms <  7 * 60000 THEN 1 ELSE 0 END)
-        FROM runs
-        WHERE re_timed_time_ms IS NOT NULL
-          AND speedrun_com_status != 'Banned'
-    """)
 
-    conn.commit()
-    print("Stats precomputed.")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
