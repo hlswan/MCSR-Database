@@ -149,12 +149,18 @@ def stats_player():
     total_run_stats = 0
 
     if runner_name:
-        row = db.execute(
-            "SELECT id, name, flag FROM runners WHERE name = ?", (runner_name,)
-        ).fetchone()
+        row = db.execute("""
+            SELECT rn.id, rn.name, rn.flag,
+                   rn.sub10, rn.sub9, rn.sub8, rn.sub7,
+                   rn.best_lb_position, rn.days_top10,
+                   rs.total_runs
+            FROM runners rn
+            LEFT JOIN runner_stats rs ON rs.runner_id = rn.id
+            WHERE rn.name = ?
+        """, (runner_name,)).fetchone()
 
         if row:
-            selected_runner = dict(row)
+            selected_runner = {"id": row["id"], "name": row["name"], "flag": row["flag"]}
             runner_id = row["id"]
 
             runner_runs = [dict(r) for r in db.execute("""
@@ -173,18 +179,6 @@ def stats_player():
                 WHERE runner = ?
             """, (runner_name,)).fetchone()
 
-            sub_counts = db.execute("""
-                SELECT
-                    COUNT(*) AS total,
-                    SUM(CASE WHEN re_timed_time_ms < 600000  THEN 1 ELSE 0 END) AS sub10,
-                    SUM(CASE WHEN re_timed_time_ms < 540000  THEN 1 ELSE 0 END) AS sub9,
-                    SUM(CASE WHEN re_timed_time_ms < 480000  THEN 1 ELSE 0 END) AS sub8,
-                    SUM(CASE WHEN re_timed_time_ms < 420000  THEN 1 ELSE 0 END) AS sub7
-                FROM runs
-                WHERE runner_id = ?
-                  AND re_timed_time_ms IS NOT NULL
-            """, (runner_id,)).fetchone()
-
             pb_progression_rows = db.execute("""
                 SELECT re_timed_time_ms, date
                 FROM runs
@@ -195,37 +189,43 @@ def stats_player():
                 ORDER BY date ASC
             """, (runner_id,)).fetchall()
 
-
-            # Calculate the historical rank for every PB and find the best one + its link
-            peak_data = db.execute("""
-                                   WITH pb_ranks AS (SELECT r1.link,
-                                                            r1.re_timed_time_ms,
-                                                            CASE
-                                                                WHEN r1.is_wr = 1 THEN 1
-                                                                ELSE (SELECT COUNT(DISTINCT r2.runner_id) + 1
-                                                                      FROM runs r2
-                                                                      WHERE r2.re_timed_time_ms < r1.re_timed_time_ms
-                                                                        AND r2.date <= r1.date)
-                                                                END AS historical_rank
-                                                     FROM runs r1
-                                                     WHERE r1.runner_id = ?
-                                                       AND r1.is_pb = 1)
-                                   SELECT historical_rank, link
-                                   FROM pb_ranks
-                                   ORDER BY historical_rank ASC, re_timed_time_ms ASC LIMIT 1
-                                   """, (runner_id,)).fetchone()
+            # Fetch the link for the run that achieved the runner's best lb position.
+            # best_lb_position is already pre-computed in the runners table; we only
+            # need a link lookup here — no heavy historical-rank CTE required.
+            best_lb_link_row = db.execute("""
+                WITH pb_ranks AS (
+                    SELECT r1.link,
+                           r1.re_timed_time_ms,
+                           CASE
+                               WHEN r1.is_wr = 1 THEN 1
+                               ELSE (SELECT COUNT(DISTINCT r2.runner_id) + 1
+                                     FROM runs r2
+                                     WHERE r2.re_timed_time_ms < r1.re_timed_time_ms
+                                       AND r2.date <= r1.date)
+                           END AS historical_rank
+                    FROM runs r1
+                    WHERE r1.runner_id = ?
+                      AND r1.is_pb = 1
+                )
+                SELECT link
+                FROM pb_ranks
+                WHERE historical_rank = ?
+                ORDER BY re_timed_time_ms ASC
+                LIMIT 1
+            """, (runner_id, row["best_lb_position"])).fetchone()
 
             runner_stats = {
-                "lb_position": lb_row["lb_position"] if lb_row else None,
-                "best_lb_position": peak_data["historical_rank"] if peak_data else None,
-                "best_lb_link": peak_data["link"] if peak_data else None,  # New field
-                "pb": lb_row["re_timed_time_raw"] if lb_row else None,
-                "pb_ms": lb_row["re_timed_time_ms"] if lb_row else None,
-                "total": sub_counts["total"],
-                "sub10": sub_counts["sub10"] or 0,
-                "sub9": sub_counts["sub9"] or 0,
-                "sub8": sub_counts["sub8"] or 0,
-                "sub7": sub_counts["sub7"] or 0,
+                "lb_position":      lb_row["lb_position"] if lb_row else None,
+                "best_lb_position": row["best_lb_position"],
+                "best_lb_link":     best_lb_link_row["link"] if best_lb_link_row else None,
+                "pb":               lb_row["re_timed_time_raw"] if lb_row else None,
+                "pb_ms":            lb_row["re_timed_time_ms"] if lb_row else None,
+                "total":            row["total_runs"] or 0,
+                "sub10":            row["sub10"] or 0,
+                "sub9":             row["sub9"] or 0,
+                "sub8":             row["sub8"] or 0,
+                "sub7":             row["sub7"] or 0,
+                "days_top10":       row["days_top10"] or 0,
             }
 
             pb_progression = [dict(r) for r in pb_progression_rows]
